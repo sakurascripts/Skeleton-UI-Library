@@ -1,24 +1,21 @@
---// Skeleton UI Library v1.3.1 (STABLE RELEASE)
---// Mobile + PC | Fancy | No Bugs
+--// Skeleton UI Library v1.4.0
+--// Delta / Mobile / PC SAFE
 
 local Skeleton = {}
 Skeleton.__index = Skeleton
 
+--// Services
 local Players = game:GetService("Players")
+local UIS = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
+local Camera = workspace.CurrentCamera
 local LocalPlayer = Players.LocalPlayer
 
+--// ScreenGui creator (executor safe)
 local function CreateScreenGui(name)
     local parent
-
-    -- Synapse / Fluxus / some executors
     if gethui then
         parent = gethui()
-
-    -- Synapse X protected GUI
-    elseif syn and syn.protect_gui then
-        parent = syn.protect_gui(Instance.new("ScreenGui"))
-
-    -- Delta / Mobile / fallback
     else
         parent = LocalPlayer:WaitForChild("PlayerGui")
     end
@@ -28,79 +25,60 @@ local function CreateScreenGui(name)
     gui.ResetOnSpawn = false
     gui.IgnoreGuiInset = true
     gui.Parent = parent
-
     return gui
 end
-
---// Services
-local UIS = game:GetService("UserInputService")
-local TweenService = game:GetService("TweenService")
-local Camera = workspace.CurrentCamera
 
 --// Theme
 local Theme = {
     Background = Color3.fromRGB(18,18,20),
     Secondary  = Color3.fromRGB(28,28,32),
-    Accent     = Color3.fromRGB(120,180,255),
     Text       = Color3.fromRGB(235,235,235),
-    Divider    = Color3.fromRGB(55,55,60)
+    Divider    = Color3.fromRGB(60,60,65)
 }
 
---// Utils
-local function Tween(obj, t, props)
-    local ok, tween = pcall(function()
-        return TweenService:Create(
-            obj,
-            TweenInfo.new(t, Enum.EasingStyle.Sine, Enum.EasingDirection.Out),
-            props
-        )
-    end)
-
-    if ok and tween then
-        tween:Play()
-    else
-        for k,v in pairs(props) do
-            obj[k] = v
-        end
-    end
+--// Tween helper
+local function Tween(obj,time,props)
+    local t = TweenService:Create(
+        obj,
+        TweenInfo.new(time, Enum.EasingStyle.Sine, Enum.EasingDirection.Out),
+        props
+    )
+    t:Play()
 end
 
---// Drag (Touch + Mouse)
+--// Drag (mouse + touch)
 local function MakeDraggable(frame, handle)
-    local dragging, startPos, startInput
+    local drag, startPos, startInput
 
-    handle.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1
-        or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            startInput = input.Position
+    handle.InputBegan:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 or
+           i.UserInputType == Enum.UserInputType.Touch then
+            drag = true
+            startInput = i.Position
             startPos = frame.Position
-
-            input.Changed:Connect(function()
-                if input.UserInputState == Enum.UserInputState.End then
-                    dragging = false
-                end
-            end)
         end
     end)
 
-    handle.InputChanged:Connect(function(input)
-        if dragging then
-            local delta = input.Position - startInput
+    UIS.InputChanged:Connect(function(i)
+        if drag and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
+            local delta = i.Position - startInput
             frame.Position = UDim2.new(
-                startPos.X.Scale,
-                startPos.X.Offset + delta.X,
-                startPos.Y.Scale,
-                startPos.Y.Offset + delta.Y
+                startPos.X.Scale, startPos.X.Offset + delta.X,
+                startPos.Y.Scale, startPos.Y.Offset + delta.Y
             )
         end
     end)
+
+    UIS.InputEnded:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+            drag = false
+        end
+    end)
 end
 
---// Auto Scale
+--// Auto scale
 local function AutoScale(frame)
-    local size = Camera.ViewportSize
-    local scale = math.clamp(size.X / 900, 0.75, 1)
+    local scale = math.clamp(Camera.ViewportSize.X / 900, 0.75, 1)
     frame.Size = UDim2.new(0, 540 * scale, 0, 420 * scale)
 end
 
@@ -109,152 +87,96 @@ function Skeleton:CreateWindow(options)
     options = options or {}
     local Window = {}
 
-    local isMobile = UIS.TouchEnabled
-    local isVisible = isMobile
+    local Gui = CreateScreenGui("SkeletonUI")
+    local Visible = UIS.TouchEnabled
 
-    -- ScreenGui
-    local Gui = Create("ScreenGui", {
-        Name = "SkeletonUI",
-        Parent = game.CoreGui,
-        ResetOnSpawn = false,
-        IgnoreGuiInset = true
-    })
-
-    -- Shadow
-    local Shadow = Create("ImageLabel", {
-        Image = "rbxassetid://1316045217",
-        BackgroundTransparency = 1,
-        ImageTransparency = 0.75,
-        ScaleType = Enum.ScaleType.Slice,
-        SliceCenter = Rect.new(10,10,118,118),
-        Parent = Gui
-    })
-
-    -- Main
-    local Main = Create("Frame", {
-        AnchorPoint = Vector2.new(0.5,0.5),
-        Position = UDim2.fromScale(0.5,0.5),
-        BackgroundColor3 = Theme.Background,
-        Visible = isVisible,
-        Parent = Gui
-    })
+    local Main = Instance.new("Frame", Gui)
+    Main.AnchorPoint = Vector2.new(0.5,0.5)
+    Main.Position = UDim2.fromScale(0.5,0.5)
+    Main.BackgroundColor3 = Theme.Background
+    Main.Visible = Visible
     Instance.new("UICorner", Main).CornerRadius = UDim.new(0,14)
-
     AutoScale(Main)
-    Shadow.Size = Main.Size + UDim2.fromOffset(24,24)
-    Shadow.Position = Main.Position - UDim2.fromOffset(12,12)
-    Shadow.Visible = isVisible
 
     Camera:GetPropertyChangedSignal("ViewportSize"):Connect(function()
         AutoScale(Main)
-        Shadow.Size = Main.Size + UDim2.fromOffset(24,24)
     end)
 
     -- Topbar
-    local Top = Create("Frame", {
-        Size = UDim2.new(1,0,0,48),
-        BackgroundColor3 = Theme.Secondary,
-        Parent = Main
-    })
+    local Top = Instance.new("Frame", Main)
+    Top.Size = UDim2.new(1,0,0,46)
+    Top.BackgroundColor3 = Theme.Secondary
     Instance.new("UICorner", Top).CornerRadius = UDim.new(0,14)
 
-    Create("TextLabel", {
-        Text = options.Name or "Skeleton UI v1.3.1",
-        Font = Enum.Font.GothamBold,
-        TextSize = 15,
-        TextColor3 = Theme.Text,
-        BackgroundTransparency = 1,
-        Size = UDim2.new(1,-20,1,0),
-        Position = UDim2.new(0,12,0,0),
-        TextXAlignment = Enum.TextXAlignment.Left,
-        Parent = Top
-    })
+    local Title = Instance.new("TextLabel", Top)
+    Title.Text = options.Name or "Skeleton UI"
+    Title.Font = Enum.Font.GothamBold
+    Title.TextSize = 14
+    Title.TextColor3 = Theme.Text
+    Title.BackgroundTransparency = 1
+    Title.Size = UDim2.new(1,-20,1,0)
+    Title.Position = UDim2.new(0,10,0,0)
+    Title.TextXAlignment = Left
 
     MakeDraggable(Main, Top)
 
-    -- Toggle Function
-    local function ToggleUI()
-        isVisible = not isVisible
+    -- Tabs
+    local Tabs = Instance.new("Frame", Main)
+    Tabs.Position = UDim2.new(0,0,0,46)
+    Tabs.Size = UDim2.new(0,150,1,-46)
+    Tabs.BackgroundColor3 = Theme.Secondary
 
-        if isVisible then
-            Main.Visible = true
-            Shadow.Visible = true
-            Tween(Main, 0.25, {BackgroundTransparency = 0})
-        else
-            Tween(Main, 0.25, {BackgroundTransparency = 1})
-            task.delay(0.25, function()
-                Main.Visible = false
-                Shadow.Visible = false
-            end)
-        end
+    local Pages = Instance.new("Frame", Main)
+    Pages.Position = UDim2.new(0,150,0,46)
+    Pages.Size = UDim2.new(1,-150,1,-46)
+    Pages.BackgroundTransparency = 1
+
+    -- Toggle UI
+    local function Toggle()
+        Visible = not Visible
+        Main.Visible = Visible
     end
 
-    -- PC Toggle
-    UIS.InputBegan:Connect(function(input, gp)
-        if gp then return end
-        if input.UserInputType == Enum.UserInputType.Keyboard
-        and input.KeyCode == (options.ToggleKey or Enum.KeyCode.RightShift) then
-            ToggleUI()
+    UIS.InputBegan:Connect(function(i,gp)
+        if not gp and i.KeyCode == (options.ToggleKey or Enum.KeyCode.RightShift) then
+            Toggle()
         end
     end)
 
-    -- Mobile Button
-    local MobileBtn = Create("TextButton", {
-        Size = UDim2.new(0,50,0,50),
-        Position = UDim2.new(0,20,0.7,0),
-        Text = "☠",
-        Font = Enum.Font.GothamBold,
-        TextSize = 22,
-        BackgroundColor3 = Theme.Secondary,
-        TextColor3 = Theme.Text,
-        ZIndex = 999,
-        Parent = Gui
-    })
-    Instance.new("UICorner", MobileBtn).CornerRadius = UDim.new(1,0)
-    MobileBtn.Visible = isMobile
-    MobileBtn.MouseButton1Click:Connect(ToggleUI)
-    MakeDraggable(MobileBtn, MobileBtn)
-
-    -- Tabs
-    local Tabs = Create("Frame", {
-        Size = UDim2.new(0,150,1,-48),
-        Position = UDim2.new(0,0,0,48),
-        BackgroundColor3 = Theme.Secondary,
-        Parent = Main
-    })
-
-    local Pages = Create("Frame", {
-        Size = UDim2.new(1,-150,1,-48),
-        Position = UDim2.new(0,150,0,48),
-        BackgroundTransparency = 1,
-        Parent = Main
-    })
+    if UIS.TouchEnabled then
+        local Mobile = Instance.new("TextButton", Gui)
+        Mobile.Size = UDim2.new(0,48,0,48)
+        Mobile.Position = UDim2.new(0,20,0.6,0)
+        Mobile.Text = "☠"
+        Mobile.Font = Enum.Font.GothamBold
+        Mobile.TextSize = 22
+        Mobile.BackgroundColor3 = Theme.Secondary
+        Mobile.TextColor3 = Theme.Text
+        Instance.new("UICorner", Mobile).CornerRadius = UDim.new(1,0)
+        Mobile.MouseButton1Click:Connect(Toggle)
+        MakeDraggable(Mobile, Mobile)
+    end
 
     -- Create Tab
     function Window:CreateTab(name)
         local Tab = {}
 
-        local Btn = Create("TextButton", {
-            Text = name,
-            Size = UDim2.new(1,-12,0,38),
-            BackgroundColor3 = Theme.Background,
-            TextColor3 = Theme.Text,
-            Font = Enum.Font.Gotham,
-            TextSize = 13,
-            Parent = Tabs
-        })
+        local Btn = Instance.new("TextButton", Tabs)
+        Btn.Size = UDim2.new(1,-12,0,36)
+        Btn.Text = name
+        Btn.Font = Enum.Font.Gotham
+        Btn.TextSize = 13
+        Btn.TextColor3 = Theme.Text
+        Btn.BackgroundColor3 = Theme.Background
         Instance.new("UICorner", Btn).CornerRadius = UDim.new(0,10)
 
-        local Page = Create("ScrollingFrame", {
-            Size = UDim2.new(1,0,1,0),
-            ScrollBarImageTransparency = 1,
-            CanvasSize = UDim2.new(),
-            Visible = false,
-            Parent = Pages
-        })
+        local Page = Instance.new("ScrollingFrame", Pages)
+        Page.Size = UDim2.new(1,0,1,0)
+        Page.ScrollBarImageTransparency = 1
+        Page.Visible = false
+        Page.CanvasSize = UDim2.new()
 
-        local Layout = local Layout = Instance.new("UIListLayout", Page)
-Layout.Name = "UIListLayout"
+        local Layout = Instance.new("UIListLayout", Page)
         Layout.Padding = UDim.new(0,12)
 
         Btn.MouseButton1Click:Connect(function()
@@ -264,72 +186,95 @@ Layout.Name = "UIListLayout"
             Page.Visible = true
         end)
 
-        -- Section
         function Tab:AddSection(title)
             local Section = {}
 
-            local Holder = Create("Frame", {
-                Size = UDim2.new(1,-12,0,30),
-                BackgroundTransparency = 1,
-                Parent = Page
-            })
+            local Holder = Instance.new("Frame", Page)
+            Holder.BackgroundTransparency = 1
+            Holder.Size = UDim2.new(1,-12,0,30)
 
-            Create("TextLabel", {
-                Text = title,
-                Font = Enum.Font.GothamBold,
-                TextSize = 13,
-                TextColor3 = Theme.Text,
-                BackgroundTransparency = 1,
-                Size = UDim2.new(1,0,0,20),
-                Parent = Holder
-            })
+            local Label = Instance.new("TextLabel", Holder)
+            Label.Text = title
+            Label.Font = Enum.Font.GothamBold
+            Label.TextSize = 13
+            Label.TextColor3 = Theme.Text
+            Label.BackgroundTransparency = 1
+            Label.Size = UDim2.new(1,0,0,20)
 
-            local Container = Create("Frame", {
-                Position = UDim2.new(0,0,0,24),
-                BackgroundTransparency = 1,
-                Parent = Holder
-            })
+            local Container = Instance.new("Frame", Holder)
+            Container.Position = UDim2.new(0,0,0,24)
+            Container.BackgroundTransparency = 1
 
-            local List = Instance.new("UIListLayout", Container)
-            List.Padding = UDim.new(0,8)
+            local CL = Instance.new("UIListLayout", Container)
+            CL.Padding = UDim.new(0,8)
 
-            List:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-                Container.Size = UDim2.new(1,0,0,List.AbsoluteContentSize.Y)
-                Holder.Size = UDim2.new(1,-12,0,List.AbsoluteContentSize.Y + 30)
-                Page.CanvasSize = UDim2.new(0,0,0,Page.UIListLayout.AbsoluteContentSize.Y + 20)
+            CL:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+                Container.Size = UDim2.new(1,0,0,CL.AbsoluteContentSize.Y)
+                Holder.Size = UDim2.new(1,-12,0,CL.AbsoluteContentSize.Y + 30)
+                Page.CanvasSize = UDim2.new(0,0,0,Layout.AbsoluteContentSize.Y + 20)
             end)
 
-            function Section:AddButton(opt)
-                local b = Create("TextButton", {
-                    Text = opt.Name or "Button",
-                    Size = UDim2.new(1,0,0,42),
-                    BackgroundColor3 = Theme.Secondary,
-                    TextColor3 = Theme.Text,
-                    Font = Enum.Font.Gotham,
-                    TextSize = 13,
-                    Parent = Container
-                })
-                Instance.new("UICorner", b).CornerRadius = UDim.new(0,10)
+            function Section:AddButton(o)
+                local b = Instance.new("TextButton", Container)
+                b.Size = UDim2.new(1,0,0,40)
+                b.Text = o.Name
+                b.Font = Enum.Font.Gotham
+                b.TextSize = 13
+                b.TextColor3 = Theme.Text
+                b.BackgroundColor3 = Theme.Secondary
+                Instance.new("UICorner", b).CornerRadius = UDim.new(0,8)
                 b.MouseButton1Click:Connect(function()
-                    if opt.Callback then opt.Callback() end
+                    if o.Callback then o.Callback() end
                 end)
             end
 
-            function Section:AddToggle(opt)
-                local state = opt.Default or false
-                local t = Create("TextButton", {
-                    Text = opt.Name .. ": " .. (state and "ON" or "OFF"),
-                    Size = UDim2.new(1,0,0,42),
-                    BackgroundColor3 = Theme.Secondary,
-                    TextColor3 = Theme.Text,
-                    Font = Enum.Font.Gotham,
-                    TextSize = 13,
-                    Parent = Container
-                })
-                Instance.new("UICorner", t).CornerRadius = UDim.new(0,10)
+            function Section:AddToggle(o)
+                local state = o.Default or false
+                local t = Instance.new("TextButton", Container)
+                t.Size = UDim2.new(1,0,0,40)
+                t.Font = Enum.Font.Gotham
+                t.TextSize = 13
+                t.BackgroundColor3 = Theme.Secondary
+                t.TextColor3 = Theme.Text
+                Instance.new("UICorner", t).CornerRadius = UDim.new(0,8)
+
+                local function Refresh()
+                    t.Text = o.Name .. ": " .. (state and "ON" or "OFF")
+                end
+
+                Refresh()
                 t.MouseButton1Click:Connect(function()
                     state = not state
-                    t.Text = opt.Name .. ": " .. (state and "ON" or "OFF")
+                    Refresh()
+                    if o.Callback then o.Callback(state) end
+                end)
+            end
+
+            function Section:AddTextbox(o)
+                local box = Instance.new("TextBox", Container)
+                box.Size = UDim2.new(1,0,0,40)
+                box.PlaceholderText = o.Placeholder
+                box.ClearTextOnFocus = false
+                box.Font = Enum.Font.Gotham
+                box.TextSize = 13
+                box.TextColor3 = Theme.Text
+                box.BackgroundColor3 = Theme.Secondary
+                Instance.new("UICorner", box).CornerRadius = UDim.new(0,8)
+                box.FocusLost:Connect(function()
+                    if o.Callback then o.Callback(box.Text) end
+                end)
+            end
+
+            return Section
+        end
+
+        return Tab
+    end
+
+    return Window
+end
+
+return Skeletonstate and "ON" or "OFF")
                     if opt.Callback then opt.Callback(state) end
                 end)
             end
