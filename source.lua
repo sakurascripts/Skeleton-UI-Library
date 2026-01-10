@@ -47,14 +47,22 @@ local Theme = {
 }
 
 --// Utils
-local function Create(class, props)
-    local obj = Instance.new(class)
-    for k,v in pairs(props) do obj[k] = v end
-    return obj
-end
-
 local function Tween(obj, t, props)
-    TweenService:Create(obj, TweenInfo.new(t, Enum.EasingStyle.Quint), props):Play()
+    local ok, tween = pcall(function()
+        return TweenService:Create(
+            obj,
+            TweenInfo.new(t, Enum.EasingStyle.Sine, Enum.EasingDirection.Out),
+            props
+        )
+    end)
+
+    if ok and tween then
+        tween:Play()
+    else
+        for k,v in pairs(props) do
+            obj[k] = v
+        end
+    end
 end
 
 --// Drag (Touch + Mouse)
@@ -325,6 +333,34 @@ Layout.Name = "UIListLayout"
                     if opt.Callback then opt.Callback(state) end
                 end)
             end
+
+            function Section:AddTextbox(opt)
+                local box = Create("TextBox", {
+                    PlaceholderText = opt.Placeholder or "Enter text...",
+                    Size = UDim2.new(1,0,0,42),
+                    BackgroundColor3 = Theme.Secondary,
+                    TextColor3 = Theme.Text,
+                    Font = Enum.Font.Gotham,
+                    TextSize = 13,
+                    ClearTextOnFocus = false,
+                    Parent = Container
+                })
+                Instance.new("UICorner", box).CornerRadius = UDim.new(0,10)
+                box.FocusLost:Connect(function()
+                    if opt.Callback then opt.Callback(box.Text) end
+                end)
+            end
+
+            return Section
+        end
+
+        return Tab
+    end
+
+    return Window
+end
+
+return Skeleton    end
 
             function Section:AddTextbox(opt)
                 local box = Create("TextBox", {
