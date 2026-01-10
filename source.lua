@@ -4,6 +4,34 @@
 local Skeleton = {}
 Skeleton.__index = Skeleton
 
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
+
+local function CreateScreenGui(name)
+    local parent
+
+    -- Synapse / Fluxus / some executors
+    if gethui then
+        parent = gethui()
+
+    -- Synapse X protected GUI
+    elseif syn and syn.protect_gui then
+        parent = syn.protect_gui(Instance.new("ScreenGui"))
+
+    -- Delta / Mobile / fallback
+    else
+        parent = LocalPlayer:WaitForChild("PlayerGui")
+    end
+
+    local gui = Instance.new("ScreenGui")
+    gui.Name = name or "SkeletonUI"
+    gui.ResetOnSpawn = false
+    gui.IgnoreGuiInset = true
+    gui.Parent = parent
+
+    return gui
+end
+
 --// Services
 local UIS = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
@@ -312,6 +340,19 @@ Layout.Name = "UIListLayout"
                 Instance.new("UICorner", box).CornerRadius = UDim.new(0,10)
                 box.FocusLost:Connect(function()
                     if opt.Callback then opt.Callback(box.Text) end
+                end)
+            end
+
+            return Section
+        end
+
+        return Tab
+    end
+
+    return Window
+end
+
+return Skeleton        if opt.Callback then opt.Callback(box.Text) end
                 end)
             end
 
