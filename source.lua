@@ -1,176 +1,222 @@
--- Script Is Ready For Use
+-- Ready For Use
 
 local Players = game:GetService("Players")
 local UserInputService = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 
 local Player = Players.LocalPlayer
+local PlayerGui = Player:WaitForChild("PlayerGui")
 
 local Skeleton = {}
 Skeleton.__index = Skeleton
 
-local function draggable(frame, handle)
-	local dragging = false
-	local dragStart, startPos
-
-	handle.InputBegan:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1
-		or input.UserInputType == Enum.UserInputType.Touch then
-			dragging = true
-			dragStart = input.Position
-			startPos = frame.Position
-		end
-	end)
-
-	handle.InputEnded:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1
-		or input.UserInputType == Enum.UserInputType.Touch then
-			dragging = false
-		end
-	end)
-
-	UserInputService.InputChanged:Connect(function(input)
-		if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement
-		or input.UserInputType == Enum.UserInputType.Touch) then
-			local delta = input.Position - dragStart
-			frame.Position = UDim2.new(
-				startPos.X.Scale,
-				startPos.X.Offset + delta.X,
-				startPos.Y.Scale,
-				startPos.Y.Offset + delta.Y
-			)
-		end
-	end)
+local function round(obj, r)
+    local c = Instance.new("UICorner")
+    c.CornerRadius = UDim.new(0, r)
+    c.Parent = obj
 end
 
 function Skeleton.new(title)
-	local self = setmetatable({}, Skeleton)
+    local self = setmetatable({}, Skeleton)
 
-	local ScreenGui = Instance.new("ScreenGui")
-	ScreenGui.IgnoreGuiInset = true
-	ScreenGui.ResetOnSpawn = false
-	ScreenGui.Parent = Player:WaitForChild("PlayerGui")
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "SkeletonUI"
+    ScreenGui.IgnoreGuiInset = true
+    ScreenGui.ResetOnSpawn = false
+    ScreenGui.Parent = PlayerGui
 
-	local OpenBtn = Instance.new("TextButton")
-	OpenBtn.Size = UDim2.new(0, 60, 0, 60)
-	OpenBtn.Position = UDim2.new(0, 20, 1, -90)
-	OpenBtn.Text = "💀"
-	OpenBtn.TextScaled = true
-	OpenBtn.BackgroundColor3 = Color3.fromRGB(0,170,255)
-	OpenBtn.TextColor3 = Color3.new(1,1,1)
-	OpenBtn.Parent = ScreenGui
-	Instance.new("UICorner", OpenBtn).CornerRadius = UDim.new(1,0)
+    local OpenBtn = Instance.new("TextButton")
+    OpenBtn.Size = UDim2.fromOffset(52, 52)
+    OpenBtn.Position = UDim2.fromOffset(20, 300)
+    OpenBtn.Text = "💀"
+    OpenBtn.TextScaled = true
+    OpenBtn.BackgroundColor3 = Color3.fromRGB(0,170,255)
+    OpenBtn.TextColor3 = Color3.new(1,1,1)
+    OpenBtn.Parent = ScreenGui
+    round(OpenBtn, 26)
 
-	local Window = Instance.new("Frame")
-	Window.Size = UDim2.new(0, 420, 0, 320)
-	Window.Position = UDim2.new(0.5, -210, 0.5, -160)
-	Window.BackgroundColor3 = Color3.fromRGB(25,25,30)
-	Window.Visible = false
-	Window.Parent = ScreenGui
-	Instance.new("UICorner", Window).CornerRadius = UDim.new(0,16)
+    local Window = Instance.new("Frame")
+    Window.Size = UDim2.fromOffset(420, 320)
+    Window.Position = UDim2.fromScale(0.5, 0.5)
+    Window.AnchorPoint = Vector2.new(0.5, 0.5)
+    Window.BackgroundColor3 = Color3.fromRGB(25,25,30)
+    Window.Visible = true
+    Window.Parent = ScreenGui
+    round(Window, 16)
 
-	local Header = Instance.new("TextLabel")
-	Header.Size = UDim2.new(1, -20, 0, 45)
-	Header.Position = UDim2.new(0, 10, 0, 10)
-	Header.Text = title
-	Header.TextScaled = true
-	Header.Font = Enum.Font.GothamBold
-	Header.TextColor3 = Color3.fromRGB(230,230,255)
-	Header.BackgroundTransparency = 1
-	Header.Parent = Window
+    local Header = Instance.new("TextLabel")
+    Header.Size = UDim2.new(1, -20, 0, 44)
+    Header.Position = UDim2.fromOffset(10, 8)
+    Header.TextXAlignment = Enum.TextXAlignment.Left
+    Header.TextYAlignment = Enum.TextYAlignment.Center
+    Header.Text = title
+    Header.Font = Enum.Font.GothamBold
+    Header.TextSize = 20
+    Header.TextColor3 = Color3.fromRGB(240,240,255)
+    Header.BackgroundTransparency = 1
+    Header.Parent = Window
 
-	local TabsBar = Instance.new("Frame")
-	TabsBar.Size = UDim2.new(1, -20, 0, 40)
-	TabsBar.Position = UDim2.new(0, 10, 0, 60)
-	TabsBar.BackgroundTransparency = 1
-	TabsBar.Parent = Window
+    local TabBar = Instance.new("Frame")
+    TabBar.Size = UDim2.new(1, -20, 0, 40)
+    TabBar.Position = UDim2.fromOffset(10, 56)
+    TabBar.BackgroundTransparency = 1
+    TabBar.Parent = Window
 
-	local TabsLayout = Instance.new("UIListLayout", TabsBar)
-	TabsLayout.FillDirection = Enum.FillDirection.Horizontal
-	TabsLayout.Padding = UDim.new(0, 6)
+    local TabLayout = Instance.new("UIListLayout")
+    TabLayout.FillDirection = Enum.FillDirection.Horizontal
+    TabLayout.Padding = UDim.new(0, 6)
+    TabLayout.Parent = TabBar
 
-	local Pages = Instance.new("Frame")
-	Pages.Size = UDim2.new(1, -20, 1, -120)
-	Pages.Position = UDim2.new(0, 10, 0, 110)
-	Pages.BackgroundTransparency = 1
-	Pages.Parent = Window
+    local Pages = Instance.new("Frame")
+    Pages.Size = UDim2.new(1, -20, 1, -110)
+    Pages.Position = UDim2.fromOffset(10, 104)
+    Pages.BackgroundTransparency = 1
+    Pages.Parent = Window
 
-	draggable(Window, Header)
-	draggable(OpenBtn, OpenBtn)
+    local drag, start, pos
+    OpenBtn.InputBegan:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+            drag = true
+            start = i.Position
+            pos = OpenBtn.Position
+        end
+    end)
 
-	OpenBtn.Activated:Connect(function()
-		Window.Visible = not Window.Visible
-	end)
+    OpenBtn.InputEnded:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
+            drag = false
+        end
+    end)
 
-	UserInputService.InputBegan:Connect(function(input, gp)
-		if gp then return end
-		if input.KeyCode == Enum.KeyCode.RightShift then
-			Window.Visible = not Window.Visible
-		end
-	end)
+    UserInputService.InputChanged:Connect(function(i)
+        if drag and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
+            local d = i.Position - start
+            OpenBtn.Position = UDim2.new(pos.X.Scale, pos.X.Offset + d.X, pos.Y.Scale, pos.Y.Offset + d.Y)
+        end
+    end)
 
-	self.Window = Window
-	self.TabsBar = TabsBar
-	self.Pages = Pages
-	self.CurrentTab = nil
+    OpenBtn.Activated:Connect(function()
+        Window.Visible = not Window.Visible
+    end)
 
-	return self
+    self._gui = ScreenGui
+    self._window = Window
+    self._tabbar = TabBar
+    self._pages = Pages
+    self._tabs = {}
+
+    return self
 end
 
 function Skeleton:AddTab(name)
-	local Tab = {}
-	Tab.__index = Tab
+    local Tab = {}
 
-	local Button = Instance.new("TextButton")
-	Button.Size = UDim2.new(0, 120, 1, 0)
-	Button.Text = name
-	Button.TextScaled = true
-	Button.BackgroundColor3 = Color3.fromRGB(40,40,55)
-	Button.TextColor3 = Color3.new(1,1,1)
-	Button.Parent = self.TabsBar
-	Instance.new("UICorner", Button).CornerRadius = UDim.new(0,10)
+    local Button = Instance.new("TextButton")
+    Button.Size = UDim2.fromOffset(110, 36)
+    Button.Text = name
+    Button.TextScaled = true
+    Button.BackgroundColor3 = Color3.fromRGB(40,40,55)
+    Button.TextColor3 = Color3.new(1,1,1)
+    Button.Parent = self._tabbar
+    round(Button, 10)
 
-	local Page = Instance.new("ScrollingFrame")
-	Page.Size = UDim2.new(1, 0, 1, 0)
-	Page.CanvasSize = UDim2.new(0, 0, 0, 0)
-	Page.ScrollBarImageTransparency = 1
-	Page.Visible = false
-	Page.Parent = self.Pages
+    local Page = Instance.new("ScrollingFrame")
+    Page.Size = UDim2.fromScale(1,1)
+    Page.CanvasSize = UDim2.fromOffset(0,0)
+    Page.ScrollBarImageTransparency = 1
+    Page.Visible = false
+    Page.Parent = self._pages
 
-	local Layout = Instance.new("UIListLayout", Page)
-	Layout.Padding = UDim.new(0, 10)
+    local Layout = Instance.new("UIListLayout")
+    Layout.Padding = UDim.new(0, 10)
+    Layout.Parent = Page
 
-	Layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-		Page.CanvasSize = UDim2.new(0, 0, 0, Layout.AbsoluteContentSize.Y + 10)
-	end)
+    Layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        Page.CanvasSize = UDim2.fromOffset(0, Layout.AbsoluteContentSize.Y + 10)
+    end)
 
-	Button.Activated:Connect(function()
-		if self.CurrentTab then
-			self.CurrentTab.Page.Visible = false
-			self.CurrentTab.Button.BackgroundColor3 = Color3.fromRGB(40,40,55)
-		end
+    Button.Activated:Connect(function()
+        for _, t in pairs(self._tabs) do
+            t.page.Visible = false
+            t.button.BackgroundColor3 = Color3.fromRGB(40,40,55)
+        end
+        Page.Visible = true
+        Button.BackgroundColor3 = Color3.fromRGB(70,70,100)
+    end)
 
-		self.CurrentTab = Tab
-		Page.Visible = true
-		Button.BackgroundColor3 = Color3.fromRGB(70,70,100)
-	end)
+    Tab.page = Page
+    Tab.button = Button
 
-	Tab.Button = Button
-	Tab.Page = Page
+    function Tab:AddSection(title)
+        local Section = {}
 
-	function Tab:AddSection()
-		local Section = {}
+        local Holder = Instance.new("Frame")
+        Holder.Size = UDim2.new(1, 0, 0, 40)
+        Holder.BackgroundColor3 = Color3.fromRGB(35,35,45)
+        Holder.Parent = Page
+        round(Holder, 12)
 
-		local Frame = Instance.new("Frame")
-		Frame.Size = UDim2.new(1, 0, 0, 10)
-		Frame.BackgroundColor3 = Color3.fromRGB(35,35,45)
-		Frame.BackgroundTransparency = 0.25
-		Frame.Parent = Page
-		Instance.new("UICorner", Frame).CornerRadius = UDim.new(0,12)
+        local Label = Instance.new("TextLabel")
+        Label.Size = UDim2.new(1, -20, 0, 28)
+        Label.Position = UDim2.fromOffset(10, 6)
+        Label.Text = title
+        Label.Font = Enum.Font.GothamBold
+        Label.TextSize = 16
+        Label.TextXAlignment = Enum.TextXAlignment.Left
+        Label.TextColor3 = Color3.fromRGB(230,230,240)
+        Label.BackgroundTransparency = 1
+        Label.Parent = Holder
 
-		local Layout = Instance.new("UIListLayout", Frame)
-		Layout.Padding = UDim.new(0, 6)
+        local List = Instance.new("UIListLayout")
+        List.Padding = UDim.new(0, 8)
+        List.Parent = Holder
 
-		function Section:AddButton(text, callback)
-			local Btn = Instance.new("TextButton")
-			Btn.Size = UDim2.new(1, -20, 0, 40
+        List:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+            Holder.Size = UDim2.new(1, 0, 0, List.AbsoluteContentSize.Y + 12)
+        end)
+
+        function Section:AddButton(text, callback)
+            local B = Instance.new("TextButton")
+            B.Size = UDim2.new(1, -20, 0, 36)
+            B.Text = text
+            B.TextScaled = true
+            B.BackgroundColor3 = Color3.fromRGB(0,170,255)
+            B.TextColor3 = Color3.new(1,1,1)
+            B.Parent = Holder
+            round(B, 10)
+            B.Activated:Connect(callback)
+        end
+
+        function Section:AddToggle(text, callback)
+            local T = Instance.new("TextButton")
+            T.Size = UDim2.new(1, -20, 0, 36)
+            T.Text = text
+            T.TextScaled = true
+            T.BackgroundColor3 = Color3.fromRGB(120,120,120)
+            T.TextColor3 = Color3.new(1,1,1)
+            T.Parent = Holder
+            round(T, 10)
+
+            local state = false
+            T.Activated:Connect(function()
+                state = not state
+                TweenService:Create(T, TweenInfo.new(0.15), {
+                    BackgroundColor3 = state and Color3.fromRGB(0,170,120) or Color3.fromRGB(120,120,120)
+                }):Play()
+                callback(state)
+            end)
+        end
+
+        return Section
+    end
+
+    table.insert(self._tabs, Tab)
+
+    if #self._tabs == 1 then
+        Button:Activate()
+    end
+
+    return Tab
+end
+
+return Skeleton
