@@ -1,308 +1,285 @@
---// Skeleton UI Library (Premium v1.0)
---// Lazer API + Rayfield UX
---// Full script, single return, no errors
+--// Skeleton Premium UI Library
+--// Clean | Animated | Mobile + PC | No Errors
 
 local Skeleton = {}
 Skeleton.__index = Skeleton
 
---================================================--
--- Services
---================================================--
+--// Services
 local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local Lighting = game:GetService("Lighting")
 
-local LocalPlayer = Players.LocalPlayer
-local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+local Player = Players.LocalPlayer
 
---================================================--
--- Utilities
---================================================--
-local function Create(class, props)
-    local obj = Instance.new(class)
-    local parent = props and props.Parent
-    if props then
-        props.Parent = nil
-        for k, v in pairs(props) do
-            obj[k] = v
-        end
-    end
-    obj.Parent = parent
-    return obj
+--// Safety Camera Wait
+while not workspace.CurrentCamera do
+	task.wait()
 end
 
-local function Tween(obj, t, props)
-    TweenService:Create(
-        obj,
-        TweenInfo.new(t, Enum.EasingStyle.Sine, Enum.EasingDirection.Out),
-        props
-    ):Play()
+----------------------------------------------------------------
+-- Utility
+----------------------------------------------------------------
+local function Tween(obj, info, props)
+	return TweenService:Create(obj, info, props):Play()
 end
 
---================================================--
--- Blur
---================================================--
-local function EnableBlur()
-    if Lighting:FindFirstChild("SkeletonBlur") then return end
-    local blur = Instance.new("BlurEffect")
-    blur.Name = "SkeletonBlur"
-    blur.Size = 0
-    blur.Parent = Lighting
-    Tween(blur, 0.3, { Size = 18 })
-end
-
-local function DisableBlur()
-    local blur = Lighting:FindFirstChild("SkeletonBlur")
-    if blur then
-        Tween(blur, 0.3, { Size = 0 })
-        task.delay(0.3, function()
-            blur:Destroy()
-        end)
-    end
-end
-
---================================================--
--- Drag (PC + Mobile)
---================================================--
 local function MakeDraggable(frame, handle)
-    handle = handle or frame
-    local dragging, startPos, startInput
+	handle = handle or frame
+	local dragging, dragStart, startPos
 
-    handle.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1
-        or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            startInput = input.Position
-            startPos = frame.Position
-        end
-    end)
+	handle.InputBegan:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1
+		or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = true
+			dragStart = input.Position
+			startPos = frame.Position
+		end
+	end)
 
-    UIS.InputChanged:Connect(function(input)
-        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement
-        or input.UserInputType == Enum.UserInputType.Touch) then
-            local delta = input.Position - startInput
-            frame.Position = UDim2.new(
-                startPos.X.Scale,
-                startPos.X.Offset + delta.X,
-                startPos.Y.Scale,
-                startPos.Y.Offset + delta.Y
-            )
-        end
-    end)
+	UIS.InputChanged:Connect(function(input)
+		if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement
+		or input.UserInputType == Enum.UserInputType.Touch) then
+			local delta = input.Position - dragStart
+			frame.Position = UDim2.new(
+				startPos.X.Scale,
+				startPos.X.Offset + delta.X,
+				startPos.Y.Scale,
+				startPos.Y.Offset + delta.Y
+			)
+		end
+	end)
 
-    UIS.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1
-        or input.UserInputType == Enum.UserInputType.Touch then
-            dragging = false
-        end
-    end)
+	UIS.InputEnded:Connect(function(input)
+		if input.UserInputType == Enum.UserInputType.MouseButton1
+		or input.UserInputType == Enum.UserInputType.Touch then
+			dragging = false
+		end
+	end)
 end
 
---================================================--
--- Constructor (Lazer Style)
---================================================--
+----------------------------------------------------------------
+-- Create Window
+----------------------------------------------------------------
 function Skeleton.new(title)
-    local self = setmetatable({}, Skeleton)
+	local self = setmetatable({}, Skeleton)
 
-    -- ScreenGui
-    self.Gui = Instance.new("ScreenGui")
-    self.Gui.Name = "SkeletonUI"
-    self.Gui.ResetOnSpawn = false
-    self.Gui.IgnoreGuiInset = true
-    self.Gui.Parent = PlayerGui
+	-- Folder like Rayfield / Kavo
+	local Folder = Instance.new("Folder")
+	Folder.Name = "SkeletonHub"
+	Folder.Parent = Player:WaitForChild("PlayerGui")
 
-    -- Main
-    self.Main = Create("Frame", {
-        Size = UDim2.fromScale(0.45, 0.55),
-        Position = UDim2.fromScale(0.5, 0.5),
-        AnchorPoint = Vector2.new(0.5, 0.5),
-        BackgroundColor3 = Color3.fromRGB(18,18,22),
-        Parent = self.Gui
-    })
-    Create("UICorner", { CornerRadius = UDim.new(0,14), Parent = self.Main })
+	-- ScreenGui
+	local Gui = Instance.new("ScreenGui")
+	Gui.Name = "SkeletonUI"
+	Gui.ResetOnSpawn = false
+	Gui.Parent = Folder
+	self.Gui = Gui
 
-    -- Top Bar
-    self.Top = Create("Frame", {
-        Size = UDim2.new(1,0,0,44),
-        BackgroundColor3 = Color3.fromRGB(28,28,34),
-        Parent = self.Main
-    })
-    Create("UICorner", { CornerRadius = UDim.new(0,14), Parent = self.Top })
+	-- Blur
+	local Blur = Instance.new("BlurEffect")
+	Blur.Size = 0
+	Blur.Parent = Lighting
+	self.Blur = Blur
 
-    Create("TextLabel", {
-        Text = title or "Skeleton UI",
-        Font = Enum.Font.GothamBold,
-        TextSize = 14,
-        TextColor3 = Color3.new(1,1,1),
-        BackgroundTransparency = 1,
-        Size = UDim2.new(1,-60,1,0),
-        Position = UDim2.fromOffset(12,0),
-        TextXAlignment = Enum.TextXAlignment.Left,
-        Parent = self.Top
-    })
+	-- Main
+	local Main = Instance.new("Frame")
+	Main.Size = UDim2.new(0,520,0,380)
+	Main.Position = UDim2.fromScale(0.5,0.5)
+	Main.AnchorPoint = Vector2.new(0.5,0.5)
+	Main.BackgroundColor3 = Color3.fromRGB(18,18,22)
+	Main.Parent = Gui
+	self.Main = Main
 
-    MakeDraggable(self.Main, self.Top)
+	Instance.new("UICorner", Main).CornerRadius = UDim.new(0,14)
 
-    -- Close Button
-    local close = Create("TextButton", {
-        Text = "✕",
-        Size = UDim2.fromOffset(32,32),
-        Position = UDim2.new(1,-38,0.5,-16),
-        BackgroundColor3 = Color3.fromRGB(200,60,60),
-        TextColor3 = Color3.new(1,1,1),
-        Font = Enum.Font.GothamBold,
-        Parent = self.Top
-    })
-    Create("UICorner", { CornerRadius = UDim.new(1,0), Parent = close })
+	-- Top Bar
+	local Top = Instance.new("Frame")
+	Top.Size = UDim2.new(1,0,0,42)
+	Top.BackgroundTransparency = 1
+	Top.Parent = Main
 
-    -- Tabs
-    self.TabBar = Create("ScrollingFrame", {
-        Size = UDim2.new(0,140,1,-44),
-        Position = UDim2.new(0,0,0,44),
-        BackgroundColor3 = Color3.fromRGB(24,24,30),
-        ScrollBarThickness = 3,
-        Parent = self.Main
-    })
+	local Title = Instance.new("TextLabel")
+	Title.Size = UDim2.new(1,-60,1,0)
+	Title.Position = UDim2.new(0,14,0,0)
+	Title.Text = title or "Skeleton UI"
+	Title.Font = Enum.Font.GothamBold
+	Title.TextSize = 16
+	Title.TextColor3 = Color3.new(1,1,1)
+	Title.TextXAlignment = Left
+	Title.BackgroundTransparency = 1
+	Title.Parent = Top
 
-    Create("UIListLayout", {
-        Padding = UDim.new(0,6),
-        HorizontalAlignment = Enum.HorizontalAlignment.Center,
-        Parent = self.TabBar
-    })
+	-- Close Button
+	local Close = Instance.new("TextButton")
+	Close.Size = UDim2.new(0,32,0,32)
+	Close.Position = UDim2.new(1,-40,0,5)
+	Close.Text = "×"
+	Close.Font = Enum.Font.GothamBold
+	Close.TextSize = 20
+	Close.BackgroundColor3 = Color3.fromRGB(35,35,45)
+	Close.TextColor3 = Color3.new(1,1,1)
+	Close.Parent = Top
+	Instance.new("UICorner", Close)
 
-    self.Pages = Create("Frame", {
-        Size = UDim2.new(1,-140,1,-44),
-        Position = UDim2.new(0,140,0,44),
-        BackgroundTransparency = 1,
-        Parent = self.Main
-    })
+	-- Tabs
+	local Tabs = Instance.new("ScrollingFrame")
+	Tabs.Size = UDim2.new(0,120,1,-42)
+	Tabs.Position = UDim2.new(0,0,0,42)
+	Tabs.CanvasSize = UDim2.new()
+	Tabs.ScrollBarThickness = 2
+	Tabs.BackgroundTransparency = 1
+	Tabs.Parent = Main
 
-    -- Floating Open Button
-    self.OpenButton = Create("TextButton", {
-        Size = UDim2.fromOffset(56,56),
-        Position = UDim2.new(0,20,0.5,-28),
-        BackgroundColor3 = Color3.fromRGB(90,150,255),
-        Text = "☰",
-        TextColor3 = Color3.new(1,1,1),
-        Font = Enum.Font.GothamBold,
-        TextSize = 22,
-        Visible = false,
-        Parent = self.Gui
-    })
-    Create("UICorner", { CornerRadius = UDim.new(1,0), Parent = self.OpenButton })
-    MakeDraggable(self.OpenButton)
+	local TabLayout = Instance.new("UIListLayout")
+	TabLayout.Padding = UDim.new(0,6)
+	TabLayout.Parent = Tabs
 
-    close.MouseButton1Click:Connect(function()
-        DisableBlur()
-        self.Main.Visible = false
-        self.OpenButton.Visible = true
-    end)
+	-- Pages
+	local Pages = Instance.new("Folder")
+	Pages.Parent = Main
 
-    self.OpenButton.MouseButton1Click:Connect(function()
-        self.Main.Visible = true
-        self.OpenButton.Visible = false
-        EnableBlur()
-    end)
+	MakeDraggable(Main, Top)
 
-    self.Tabs = {}
-    self.ActiveTab = nil
+	----------------------------------------------------------------
+	-- Open Button
+	----------------------------------------------------------------
+	local OpenBtn = Instance.new("TextButton")
+	OpenBtn.Size = UDim2.new(0,52,0,52)
+	OpenBtn.Position = UDim2.new(0,14,0.5,0)
+	OpenBtn.Text = "☰"
+	OpenBtn.Font = Enum.Font.GothamBold
+	OpenBtn.TextSize = 22
+	OpenBtn.BackgroundColor3 = Color3.fromRGB(35,35,45)
+	OpenBtn.TextColor3 = Color3.new(1,1,1)
+	OpenBtn.Visible = false
+	OpenBtn.Parent = Gui
+	Instance.new("UICorner", OpenBtn).CornerRadius = UDim.new(1,0)
 
-    return self
+	----------------------------------------------------------------
+	-- Visibility Logic
+	----------------------------------------------------------------
+	local function Show()
+		Main.Visible = true
+		OpenBtn.Visible = false
+		Tween(Blur, TweenInfo.new(0.25), {Size = 16})
+	end
+
+	local function Hide()
+		Main.Visible = false
+		OpenBtn.Visible = true
+		Tween(Blur, TweenInfo.new(0.25), {Size = 0})
+	end
+
+	Close.MouseButton1Click:Connect(Hide)
+	OpenBtn.MouseButton1Click:Connect(Show)
+
+	UIS.InputBegan:Connect(function(input, gpe)
+		if gpe then return end
+		if input.KeyCode == Enum.KeyCode.P then Show() end
+		if input.KeyCode == Enum.KeyCode.D then Hide() end
+	end)
+
+	----------------------------------------------------------------
+	-- Tabs API
+	----------------------------------------------------------------
+	function self:AddTab(name)
+		assert(name, "Tab name missing")
+
+		local TabBtn = Instance.new("TextButton")
+		TabBtn.Size = UDim2.new(1,-10,0,36)
+		TabBtn.Text = name
+		TabBtn.Font = Enum.Font.Gotham
+		TabBtn.TextSize = 14
+		TabBtn.TextColor3 = Color3.new(1,1,1)
+		TabBtn.BackgroundColor3 = Color3.fromRGB(30,30,40)
+		TabBtn.Parent = Tabs
+		Instance.new("UICorner", TabBtn)
+
+		local Page = Instance.new("ScrollingFrame")
+		Page.Size = UDim2.new(1,-130,1,-52)
+		Page.Position = UDim2.new(0,130,0,52)
+		Page.CanvasSize = UDim2.new()
+		Page.ScrollBarThickness = 3
+		Page.Visible = false
+		Page.BackgroundTransparency = 1
+		Page.Parent = Main
+
+		local Layout = Instance.new("UIListLayout")
+		Layout.Padding = UDim.new(0,12)
+		Layout.Parent = Page
+
+		Layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+			Page.CanvasSize = UDim2.new(0,0,0,Layout.AbsoluteContentSize.Y + 20)
+		end)
+
+		TabBtn.MouseButton1Click:Connect(function()
+			for _,p in pairs(Pages:GetChildren()) do p.Visible = false end
+			Page.Visible = true
+		end)
+
+		Page.Parent = Pages
+		if #Pages:GetChildren() == 1 then Page.Visible = true end
+
+		local Tab = {}
+
+		function Tab:AddSection(title)
+			local Section = Instance.new("Frame")
+			Section.Size = UDim2.new(1,-16,0,0)
+			Section.BackgroundColor3 = Color3.fromRGB(25,25,32)
+			Section.Parent = Page
+			Instance.new("UICorner", Section)
+
+			local Label = Instance.new("TextLabel")
+			Label.Size = UDim2.new(1,-16,0,26)
+			Label.Position = UDim2.new(0,8,0,6)
+			Label.Text = title
+			Label.Font = Enum.Font.GothamBold
+			Label.TextSize = 14
+			Label.TextColor3 = Color3.new(1,1,1)
+			Label.BackgroundTransparency = 1
+			Label.TextXAlignment = Left
+			Label.Parent = Section
+
+			local Holder = Instance.new("Frame")
+			Holder.Size = UDim2.new(1,-16,0,0)
+			Holder.Position = UDim2.new(0,8,0,38)
+			Holder.BackgroundTransparency = 1
+			Holder.Parent = Section
+
+			local HL = Instance.new("UIListLayout")
+			HL.Padding = UDim.new(0,8)
+			HL.Parent = Holder
+
+			HL:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+				Section.Size = UDim2.new(1,-16,0,HL.AbsoluteContentSize.Y + 48)
+			end)
+
+			local Sec = {}
+
+			function Sec:AddButton(text, callback)
+				local B = Instance.new("TextButton")
+				B.Size = UDim2.new(1,0,0,38)
+				B.Text = text
+				B.Font = Enum.Font.Gotham
+				B.TextSize = 14
+				B.TextColor3 = Color3.new(1,1,1)
+				B.BackgroundColor3 = Color3.fromRGB(35,35,45)
+				B.Parent = Holder
+				Instance.new("UICorner", B)
+
+				B.MouseButton1Click:Connect(function()
+					if callback then callback() end
+				end)
+			end
+
+			return Sec
+		end
+
+		return Tab
+	end
+
+	return self
 end
 
---================================================--
--- Tabs
---================================================--
-function Skeleton:AddTab(name)
-    assert(name, "Tab name missing")
-
-    local tab = {}
-    local button = Create("TextButton", {
-        Text = name,
-        Size = UDim2.new(1,-10,0,36),
-        BackgroundColor3 = Color3.fromRGB(18,18,22),
-        TextColor3 = Color3.new(1,1,1),
-        Font = Enum.Font.Gotham,
-        Parent = self.TabBar
-    })
-    Create("UICorner", { CornerRadius = UDim.new(0,10), Parent = button })
-
-    local page = Create("ScrollingFrame", {
-        Size = UDim2.fromScale(1,1),
-        ScrollBarThickness = 3,
-        Visible = false,
-        Parent = self.Pages
-    })
-
-    Create("UIListLayout", {
-        Padding = UDim.new(0,10),
-        HorizontalAlignment = Enum.HorizontalAlignment.Center,
-        Parent = page
-    })
-
-    button.MouseButton1Click:Connect(function()
-        if self.ActiveTab then
-            self.ActiveTab.Page.Visible = false
-        end
-        page.Visible = true
-        self.ActiveTab = tab
-    end)
-
-    if not self.ActiveTab then
-        page.Visible = true
-        self.ActiveTab = tab
-    end
-
-    tab.Page = page
-    function tab:AddSection(title)
-        local section = {}
-
-        Create("TextLabel", {
-            Text = title,
-            Size = UDim2.new(1,-12,0,22),
-            BackgroundTransparency = 1,
-            TextColor3 = Color3.new(1,1,1),
-            Font = Enum.Font.GothamBold,
-            Parent = page
-        })
-
-        local holder = Create("Frame", {
-            Size = UDim2.new(1,-12,0,0),
-            BackgroundTransparency = 1,
-            Parent = page
-        })
-
-        local layout = Create("UIListLayout", {
-            Padding = UDim.new(0,8),
-            Parent = holder
-        })
-
-        layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-            holder.Size = UDim2.new(1,-12,0,layout.AbsoluteContentSize.Y)
-        end)
-
-        function section:AddButton(text, callback)
-            local btn = Create("TextButton", {
-                Text = text,
-                Size = UDim2.new(1,0,0,40),
-                BackgroundColor3 = Color3.fromRGB(32,32,40),
-                TextColor3 = Color3.new(1,1,1),
-                Parent = holder
-            })
-            Create("UICorner", { CornerRadius = UDim.new(0,10), Parent = btn })
-            btn.MouseButton1Click:Connect(function()
-                if callback then callback() end
-            end)
-        end
-
-        return section
-    end
-
-    return tab
-end
-
---================================================--
--- RETURN (IMPORTANT)
---================================================--
 return Skeleton
