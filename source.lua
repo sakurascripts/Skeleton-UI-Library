@@ -1,233 +1,246 @@
---// Skeleton UI Library (Tabs + Sections) | Delta Safe
+--// Skeleton UI Library (Lazer-Style API)
+--// Delta Executor Safe | Mobile + PC | No stacking bugs
 
-local Library = {}
-Library.__index = Library
+local Skeleton = {}
+Skeleton.__index = Skeleton
 
---// Services
+-- Services
 local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
+local TweenService = game:GetService("TweenService")
 
 local Player = Players.LocalPlayer
 local PlayerGui = Player:WaitForChild("PlayerGui")
 
------------------------------------------------------
+--------------------------------------------------
 -- Utility
------------------------------------------------------
-local function round(px)
-    return UDim.new(0, px)
+--------------------------------------------------
+local function Tween(obj, props, time)
+    TweenService:Create(
+        obj,
+        TweenInfo.new(time or 0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+        props
+    ):Play()
 end
 
------------------------------------------------------
+--------------------------------------------------
 -- Create Window
------------------------------------------------------
-function Library.new(title)
-    local self = setmetatable({}, Library)
+--------------------------------------------------
+function Skeleton.new(title)
+    local self = setmetatable({}, Skeleton)
 
     -- ScreenGui
     local gui = Instance.new("ScreenGui")
     gui.Name = "SkeletonUI"
     gui.ResetOnSpawn = false
-    gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
     gui.Parent = PlayerGui
     self.Gui = gui
 
-    -- Main
+    -- Main Frame
     local main = Instance.new("Frame")
-    main.Size = UDim2.fromOffset(560, 440)
+    main.Size = UDim2.fromOffset(600, 450)
     main.Position = UDim2.fromScale(0.5, 0.5)
     main.AnchorPoint = Vector2.new(0.5, 0.5)
-    main.BackgroundColor3 = Color3.fromRGB(18,18,22)
-    main.Active = true
+    main.BackgroundColor3 = Color3.fromRGB(20, 20, 25)
     main.Parent = gui
+    main.Active = true
+    Instance.new("UICorner", main).CornerRadius = UDim.new(0, 12)
     self.Main = main
-
-    Instance.new("UICorner", main).CornerRadius = UDim.new(0, 14)
 
     -- Top Bar
     local top = Instance.new("Frame")
-    top.Size = UDim2.new(1, 0, 0, 46)
-    top.BackgroundColor3 = Color3.fromRGB(28,28,34)
+    top.Size = UDim2.new(1, 0, 0, 44)
+    top.BackgroundColor3 = Color3.fromRGB(30, 30, 38)
     top.Parent = main
-
-    Instance.new("UICorner", top).CornerRadius = UDim.new(0, 14)
+    Instance.new("UICorner", top).CornerRadius = UDim.new(0, 12)
 
     local titleLabel = Instance.new("TextLabel")
-    titleLabel.Size = UDim2.new(1, -16, 1, 0)
-    titleLabel.Position = UDim2.new(0, 12, 0, 0)
+    titleLabel.Size = UDim2.new(1, -50, 1, 0)
+    titleLabel.Position = UDim2.fromOffset(14, 0)
     titleLabel.BackgroundTransparency = 1
     titleLabel.Text = title or "Skeleton UI"
     titleLabel.Font = Enum.Font.GothamBold
-    titleLabel.TextSize = 15
+    titleLabel.TextSize = 16
     titleLabel.TextColor3 = Color3.new(1,1,1)
-    titleLabel.TextXAlignment = Left
+    titleLabel.TextXAlignment = Enum.TextXAlignment.Left
     titleLabel.Parent = top
 
-    -- Tabs Holder
-    local tabs = Instance.new("ScrollingFrame")
-    tabs.Size = UDim2.new(0, 150, 1, -46)
-    tabs.Position = UDim2.new(0, 0, 0, 46)
-    tabs.CanvasSize = UDim2.new()
-    tabs.ScrollBarThickness = 4
-    tabs.ScrollingDirection = Enum.ScrollingDirection.Y
-    tabs.BackgroundColor3 = Color3.fromRGB(28,28,34)
-    tabs.Parent = main
-    self.TabsFrame = tabs
+    -- Close Button
+    local close = Instance.new("TextButton")
+    close.Size = UDim2.fromOffset(36, 36)
+    close.Position = UDim2.new(1, -42, 0.5, -18)
+    close.Text = "×"
+    close.Font = Enum.Font.GothamBold
+    close.TextSize = 20
+    close.BackgroundTransparency = 1
+    close.TextColor3 = Color3.fromRGB(200,200,200)
+    close.Parent = top
 
-    local tabLayout = Instance.new("UIListLayout", tabs)
-    tabLayout.Padding = UDim.new(0, 6)
-    tabLayout.HorizontalAlignment = Center
+    close.Activated:Connect(function()
+        main.Visible = false
+        self.ToggleButton.Visible = true
+    end)
 
-    -- Pages Holder
-    local pages = Instance.new("Frame")
-    pages.Size = UDim2.new(1, -150, 1, -46)
-    pages.Position = UDim2.new(0, 150, 0, 46)
-    pages.BackgroundTransparency = 1
+    -- Floating Toggle Button (Rayfield-style)
+    local toggleBtn = Instance.new("TextButton")
+    toggleBtn.Size = UDim2.fromOffset(50,50)
+    toggleBtn.Position = UDim2.fromOffset(20,20)
+    toggleBtn.Text = "S"
+    toggleBtn.Font = Enum.Font.GothamBold
+    toggleBtn.TextSize = 20
+    toggleBtn.BackgroundColor3 = Color3.fromRGB(40,40,50)
+    toggleBtn.TextColor3 = Color3.new(1,1,1)
+    toggleBtn.Visible = false
+    toggleBtn.Parent = gui
+    Instance.new("UICorner", toggleBtn).CornerRadius = UDim.new(1,0)
+    self.ToggleButton = toggleBtn
+
+    toggleBtn.Activated:Connect(function()
+        main.Visible = true
+        toggleBtn.Visible = false
+    end)
+
+    -- Tabs
+    local tabsBar = Instance.new("ScrollingFrame")
+    tabsBar.Size = UDim2.new(1, -20, 0, 40)
+    tabsBar.Position = UDim2.fromOffset(10, 54)
+    tabsBar.CanvasSize = UDim2.new(0,0,0,0)
+    tabsBar.ScrollBarThickness = 0
+    tabsBar.BackgroundTransparency = 1
+    tabsBar.Parent = main
+
+    local tabLayout = Instance.new("UIListLayout")
+    tabLayout.FillDirection = Enum.FillDirection.Horizontal
+    tabLayout.Padding = UDim.new(0,8)
+    tabLayout.Parent = tabsBar
+
+    tabLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+        tabsBar.CanvasSize = UDim2.fromOffset(tabLayout.AbsoluteContentSize.X + 10, 0)
+    end)
+
+    -- Pages
+    local pages = Instance.new("Folder")
     pages.Parent = main
     self.Pages = pages
-
     self.ActivePage = nil
 
-    -------------------------------------------------
-    -- Drag (PC + Mobile)
-    -------------------------------------------------
-    local dragging, startPos, dragStart
-    top.InputBegan:Connect(function(i)
-        if i.UserInputType == Enum.UserInputType.MouseButton1 or i.UserInputType == Enum.UserInputType.Touch then
-            dragging = true
-            dragStart = i.Position
-            startPos = main.Position
-            i.Changed:Connect(function()
-                if i.UserInputState == Enum.UserInputState.End then
-                    dragging = false
-                end
-            end)
-        end
-    end)
-
-    UIS.InputChanged:Connect(function(i)
-        if dragging and (i.UserInputType == Enum.UserInputType.MouseMovement or i.UserInputType == Enum.UserInputType.Touch) then
-            local delta = i.Position - dragStart
-            main.Position = UDim2.new(
-                startPos.X.Scale,
-                startPos.X.Offset + delta.X,
-                startPos.Y.Scale,
-                startPos.Y.Offset + delta.Y
-            )
-        end
-    end)
+    self.TabsBar = tabsBar
+    self.Tabs = {}
 
     return self
 end
 
------------------------------------------------------
--- Tab
------------------------------------------------------
-function Library:AddTab(name)
-    assert(name, "Tab name missing")
+--------------------------------------------------
+-- Tabs
+--------------------------------------------------
+function Skeleton:AddTab(name)
+    local tab = {}
 
-    local Tab = {}
+    -- Tab Button
+    local btn = Instance.new("TextButton")
+    btn.Size = UDim2.fromOffset(120, 36)
+    btn.Text = name
+    btn.Font = Enum.Font.Gotham
+    btn.TextSize = 14
+    btn.BackgroundColor3 = Color3.fromRGB(35,35,45)
+    btn.TextColor3 = Color3.new(1,1,1)
+    btn.Parent = self.TabsBar
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0,8)
 
-    local button = Instance.new("TextButton")
-    button.Size = UDim2.new(1, -12, 0, 36)
-    button.BackgroundColor3 = Color3.fromRGB(18,18,22)
-    button.Text = name
-    button.TextColor3 = Color3.new(1,1,1)
-    button.Font = Enum.Font.Gotham
-    button.TextSize = 13
-    button.Parent = self.TabsFrame
-
-    Instance.new("UICorner", button).CornerRadius = UDim.new(0, 10)
-
+    -- Page
     local page = Instance.new("ScrollingFrame")
-    page.Size = UDim2.new(1, 0, 1, 0)
-    page.CanvasSize = UDim2.new()
-    page.ScrollBarThickness = 5
+    page.Size = UDim2.new(1, -20, 1, -110)
+    page.Position = UDim2.fromOffset(10, 100)
+    page.CanvasSize = UDim2.new(0,0,0,0)
+    page.ScrollBarThickness = 6
     page.Visible = false
     page.BackgroundTransparency = 1
     page.Parent = self.Pages
 
-    local layout = Instance.new("UIListLayout", page)
-    layout.Padding = UDim.new(0, 10)
-    layout.HorizontalAlignment = Center
+    local layout = Instance.new("UIListLayout")
+    layout.Padding = UDim.new(0,12)
+    layout.Parent = page
 
     layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
         page.CanvasSize = UDim2.fromOffset(0, layout.AbsoluteContentSize.Y + 10)
     end)
 
-    button.Activated:Connect(function()
+    btn.Activated:Connect(function()
         if self.ActivePage then
             self.ActivePage.Visible = false
         end
-        page.Visible = true
         self.ActivePage = page
+        page.Visible = true
     end)
 
     if not self.ActivePage then
-        page.Visible = true
         self.ActivePage = page
+        page.Visible = true
     end
 
-    -------------------------------------------------
-    -- Section
-    -------------------------------------------------
-    function Tab:AddSection(title)
-        assert(title, "Section title missing")
+    tab.Page = page
+    tab.Layout = layout
 
-        local Section = {}
+    --------------------------------------------------
+    -- Sections
+    --------------------------------------------------
+    function tab:AddSection(title)
+        local section = {}
 
-        local holder = Instance.new("Frame")
-        holder.Size = UDim2.new(1, -12, 0, 0)
-        holder.BackgroundTransparency = 1
-        holder.Parent = page
+        local frame = Instance.new("Frame")
+        frame.Size = UDim2.new(1, -10, 0, 40)
+        frame.BackgroundColor3 = Color3.fromRGB(30,30,38)
+        frame.Parent = page
+        Instance.new("UICorner", frame).CornerRadius = UDim.new(0,10)
 
-        local header = Instance.new("TextLabel")
-        header.Size = UDim2.new(1, 0, 0, 28)
-        header.BackgroundTransparency = 1
-        header.Text = title
-        header.Font = Enum.Font.GothamBold
-        header.TextSize = 13
-        header.TextColor3 = Color3.new(1,1,1)
-        header.TextXAlignment = Left
-        header.Parent = holder
+        local label = Instance.new("TextLabel")
+        label.Size = UDim2.new(1, -10, 0, 30)
+        label.Position = UDim2.fromOffset(10,5)
+        label.Text = title
+        label.Font = Enum.Font.GothamBold
+        label.TextSize = 14
+        label.TextColor3 = Color3.new(1,1,1)
+        label.BackgroundTransparency = 1
+        label.TextXAlignment = Enum.TextXAlignment.Left
+        label.Parent = frame
 
-        local container = Instance.new("Frame")
-        container.Size = UDim2.new(1, 0, 0, 0)
-        container.BackgroundTransparency = 1
-        container.Parent = holder
+        local content = Instance.new("UIListLayout")
+        content.Padding = UDim.new(0,8)
+        content.Parent = frame
 
-        local clayout = Instance.new("UIListLayout", container)
-        clayout.Padding = UDim.new(0, 8)
-        clayout.HorizontalAlignment = Center
-
-        clayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-            container.Size = UDim2.new(1, 0, 0, clayout.AbsoluteContentSize.Y)
-            holder.Size = UDim2.new(1, -12, 0, header.AbsoluteSize.Y + clayout.AbsoluteContentSize.Y + 6)
+        content:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+            frame.Size = UDim2.new(1, -10, 0, content.AbsoluteContentSize.Y + 40)
         end)
 
-        -------------------------------------------------
+        --------------------------------------------------
         -- Button
-        -------------------------------------------------
-        function Section:AddButton(text, callback)
+        --------------------------------------------------
+        function section:AddButton(text, callback)
             local btn = Instance.new("TextButton")
-            btn.Size = UDim2.new(1, -12, 0, 38)
-            btn.BackgroundColor3 = Color3.fromRGB(28,28,34)
+            btn.Size = UDim2.new(1, -20, 0, 36)
             btn.Text = text
-            btn.TextColor3 = Color3.new(1,1,1)
             btn.Font = Enum.Font.Gotham
-            btn.TextSize = 13
-            btn.Parent = container
-
-            Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 10)
+            btn.TextSize = 14
+            btn.BackgroundColor3 = Color3.fromRGB(45,45,55)
+            btn.TextColor3 = Color3.new(1,1,1)
+            btn.Parent = frame
+            Instance.new("UICorner", btn).CornerRadius = UDim.new(0,8)
 
             btn.Activated:Connect(function()
+                Tween(btn, {BackgroundColor3 = Color3.fromRGB(60,60,75)}, 0.1)
+                task.wait(0.1)
+                Tween(btn, {BackgroundColor3 = Color3.fromRGB(45,45,55)}, 0.1)
                 if callback then callback() end
             end)
         end
 
-        return Section
+        return section
     end
 
-    return Tab
+    return tab
 end
 
-return Library
+--------------------------------------------------
+-- Return Library
+--------------------------------------------------
+return Skeleton
