@@ -1,79 +1,283 @@
---// Skeleton UI Library v3.8 (Premium / Rayfield-style)
+--// Skeleton × Lazer Premium UI Library
+--// v1.1 – Clean Animations Added
+--// P = Show | D = Hide
 
---================================================--
+--==================================================
 -- Services
---================================================--
+--==================================================
 
 local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
-local TweenService = game:GetService("TweenService")
 local RunService = game:GetService("RunService")
+local Lighting = game:GetService("Lighting")
+local TweenService = game:GetService("TweenService")
 
 local LocalPlayer = Players.LocalPlayer
-local Camera = workspace.CurrentCamera or workspace:WaitForChild("Camera")
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
---================================================--
--- Theme
---================================================--
+--==================================================
+-- Library
+--==================================================
 
-local Theme = {
-    Background = Color3.fromRGB(18,18,22),
-    Secondary  = Color3.fromRGB(28,28,34),
-    Accent     = Color3.fromRGB(120,180,255),
-    Text       = Color3.fromRGB(235,235,235)
-}
+local Library = {}
+Library.__index = Library
 
---================================================--
--- Utilities
---================================================--
+--==================================================
+-- Tween Helper
+--==================================================
 
-local function Create(class, props)
-    assert(typeof(class) == "string", "Invalid class type")
-    local obj = Instance.new(class)
+local function Tween(obj, info, props)
+    return TweenService:Create(obj, info, props)
+end
 
-    local parent = props and props.Parent
-    if props then
-        props.Parent = nil
-        for k,v in pairs(props) do
-            obj[k] = v
+local AnimFast = TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+local AnimSmooth = TweenInfo.new(0.28, Enum.EasingStyle.Quart, Enum.EasingDirection.Out)
+
+--==================================================
+-- Blur
+--==================================================
+
+local Blur = Instance.new("BlurEffect")
+Blur.Size = 0
+Blur.Enabled = false
+Blur.Parent = Lighting
+
+--==================================================
+-- Drag
+--==================================================
+
+local function MakeDraggable(frame)
+    local dragging, dragStart, startPos
+
+    frame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = frame.Position
         end
-    end
+    end)
 
-    obj.Parent = parent
-    return obj
+    frame.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+        end
+    end)
+
+    UIS.InputChanged:Connect(function(input)
+        if dragging and (
+            input.UserInputType == Enum.UserInputType.MouseMovement
+            or input.UserInputType == Enum.UserInputType.Touch
+        ) then
+            local delta = input.Position - dragStart
+            frame.Position = UDim2.fromOffset(
+                startPos.X.Offset + delta.X,
+                startPos.Y.Offset + delta.Y
+            )
+        end
+    end)
 end
 
-local function Tween(obj, time, props)
-    TweenService:Create(
-        obj,
-        TweenInfo.new(time, Enum.EasingStyle.Sine, Enum.EasingDirection.Out),
-        props
-    ):Play()
-end
+--==================================================
+-- Create UI
+--==================================================
 
---================================================--
--- ScreenGui + Root Folder (Rayfield-style)
---================================================--
+function Library.new(title)
+    local self = setmetatable({}, Library)
 
-local function CreateRoot()
-    local parent
-    if typeof(gethui) == "function" then
-        parent = gethui()
-    else
-        parent = LocalPlayer:WaitForChild("PlayerGui")
+    -- Folder (Rayfield/Kavo style)
+    local Folder = Instance.new("Folder")
+    Folder.Name = "SkeletonHub"
+    Folder.Parent = PlayerGui
+
+    -- ScreenGui
+    local ScreenGui = Instance.new("ScreenGui")
+    ScreenGui.Name = "SkeletonUI"
+    ScreenGui.ResetOnSpawn = false
+    ScreenGui.Parent = Folder
+
+    -- Main Frame
+    local Main = Instance.new("Frame")
+    Main.Size = UDim2.fromOffset(520, 420)
+    Main.Position = UDim2.fromScale(0.5, 0.5)
+    Main.AnchorPoint = Vector2.new(0.5, 0.5)
+    Main.BackgroundColor3 = Color3.fromRGB(25,25,30)
+    Main.Visible = true
+    Main.BackgroundTransparency = 1
+    Main.Parent = ScreenGui
+    Main.Active = true
+
+    Instance.new("UICorner", Main).CornerRadius = UDim.new(0,12)
+    MakeDraggable(Main)
+
+    -- Show animation
+    Main.Size = UDim2.fromOffset(480,380)
+    Tween(Main, AnimSmooth, {
+        BackgroundTransparency = 0,
+        Size = UDim2.fromOffset(520,420)
+    }):Play()
+
+    -- Blur animation
+    Blur.Enabled = true
+    Tween(Blur, AnimSmooth, {Size = 18}):Play()
+
+    -- Title
+    local Title = Instance.new("TextLabel")
+    Title.Size = UDim2.new(1, -40, 0, 40)
+    Title.Position = UDim2.new(0, 20, 0, 0)
+    Title.BackgroundTransparency = 1
+    Title.Text = title or "Skeleton Hub"
+    Title.Font = Enum.Font.GothamBold
+    Title.TextSize = 16
+    Title.TextColor3 = Color3.new(1,1,1)
+    Title.TextXAlignment = Left
+    Title.Parent = Main
+
+    -- Tabs bar
+    local TabsBar = Instance.new("ScrollingFrame")
+    TabsBar.Size = UDim2.new(0,140,1,-40)
+    TabsBar.Position = UDim2.new(0,0,0,40)
+    TabsBar.BackgroundColor3 = Color3.fromRGB(30,30,36)
+    TabsBar.CanvasSize = UDim2.new(0,0,0,0)
+    TabsBar.ScrollBarThickness = 3
+    TabsBar.Parent = Main
+
+    local TabsLayout = Instance.new("UIListLayout", TabsBar)
+    TabsLayout.Padding = UDim.new(0,6)
+
+    -- Pages
+    local Pages = Instance.new("Frame")
+    Pages.Size = UDim2.new(1,-140,1,-40)
+    Pages.Position = UDim2.new(0,140,0,40)
+    Pages.BackgroundTransparency = 1
+    Pages.Parent = Main
+
+    -- Mini Button
+    local Mini = Instance.new("TextButton")
+    Mini.Size = UDim2.fromOffset(48,48)
+    Mini.Position = UDim2.fromOffset(20,20)
+    Mini.Text = "S"
+    Mini.Font = Enum.Font.GothamBold
+    Mini.TextSize = 20
+    Mini.BackgroundColor3 = Color3.fromRGB(120,180,255)
+    Mini.Visible = false
+    Mini.Parent = ScreenGui
+    Mini.ZIndex = 10
+    Instance.new("UICorner", Mini).CornerRadius = UDim.new(1,0)
+
+    -- Show / Hide
+    local function Show()
+        Mini.Visible = false
+        Main.Visible = true
+        Tween(Main, AnimSmooth, {
+            BackgroundTransparency = 0,
+            Size = UDim2.fromOffset(520,420)
+        }):Play()
+        Blur.Enabled = true
+        Tween(Blur, AnimSmooth, {Size = 18}):Play()
     end
 
-    local gui = Instance.new("ScreenGui")
-    gui.Name = "SkeletonUI"
-    gui.IgnoreGuiInset = true
-    gui.ResetOnSpawn = false
-    gui.Parent = parent
+    local function Hide()
+        Tween(Main, AnimFast, {
+            BackgroundTransparency = 1,
+            Size = UDim2.fromOffset(480,380)
+        }):Play()
+        Tween(Blur, AnimFast, {Size = 0}):Play()
+        task.delay(0.18, function()
+            Main.Visible = false
+            Mini.Visible = true
+        end)
+    end
 
-    local root = Instance.new("Folder")
-    root.Name = "SkeletonRoot"
-    root.Parent = gui
+    Mini.MouseButton1Click:Connect(function()
+        Tween(Mini, AnimFast, {Size = UDim2.fromOffset(52,52)}):Play()
+        task.wait(0.05)
+        Tween(Mini, AnimFast, {Size = UDim2.fromOffset(48,48)}):Play()
+        Show()
+    end)
 
-    return gui, root
+    UIS.InputBegan:Connect(function(input,gp)
+        if gp then return end
+        if input.KeyCode == Enum.KeyCode.P then
+            Show()
+        elseif input.KeyCode == Enum.KeyCode.D then
+            Hide()
+        end
+    end)
+
+    -- Tabs API
+    self.Tabs = {}
+    self.ActiveTab = nil
+
+    function self:AddTab(name)
+        local Btn = Instance.new("TextButton")
+        Btn.Size = UDim2.new(1,-10,0,36)
+        Btn.Text = name
+        Btn.Font = Enum.Font.Gotham
+        Btn.TextSize = 14
+        Btn.TextColor3 = Color3.new(1,1,1)
+        Btn.BackgroundColor3 = Color3.fromRGB(40,40,46)
+        Btn.Parent = TabsBar
+        Instance.new("UICorner", Btn).CornerRadius = UDim.new(0,8)
+
+        local Page = Instance.new("ScrollingFrame")
+        Page.Size = UDim2.new(1,0,1,0)
+        Page.CanvasSize = UDim2.new(0,0,0,0)
+        Page.ScrollBarThickness = 4
+        Page.Visible = false
+        Page.BackgroundTransparency = 1
+        Page.Parent = Pages
+
+        local Layout = Instance.new("UIListLayout", Page)
+        Layout.Padding = UDim.new(0,8)
+
+        Btn.MouseEnter:Connect(function()
+            Tween(Btn, AnimFast, {BackgroundColor3 = Color3.fromRGB(55,55,62)}):Play()
+        end)
+
+        Btn.MouseLeave:Connect(function()
+            Tween(Btn, AnimFast, {BackgroundColor3 = Color3.fromRGB(40,40,46)}):Play()
+        end)
+
+        Btn.MouseButton1Click:Connect(function()
+            if self.ActiveTab then
+                self.ActiveTab.Page.Visible = false
+            end
+            self.ActiveTab = {Page = Page}
+            Page.Visible = true
+            Page.CanvasPosition = Vector2.zero
+        end)
+
+        if not self.ActiveTab then
+            self.ActiveTab = {Page = Page}
+            Page.Visible = true
+        end
+
+        function self.ActiveTab:AddTextbox(placeholder, callback)
+            local Box = Instance.new("TextBox")
+            Box.Size = UDim2.new(1,-12,0,40)
+            Box.PlaceholderText = placeholder
+            Box.Text = ""
+            Box.Font = Enum.Font.Gotham
+            Box.TextSize = 13
+            Box.TextColor3 = Color3.new(1,1,1)
+            Box.BackgroundColor3 = Color3.fromRGB(35,35,40)
+            Box.Parent = Page
+            Instance.new("UICorner", Box).CornerRadius = UDim.new(0,8)
+
+            Box.FocusLost:Connect(function()
+                if callback then callback(Box.Text) end
+            end)
+        end
+
+        return self.ActiveTab
+    end
+
+    return self
+end
+
+return Library    return gui, root
 end
 
 --================================================--
