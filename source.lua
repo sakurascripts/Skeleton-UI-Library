@@ -1,5 +1,4 @@
---// Skeleton UI Library v3.7
---// Fully defensive, bug-free, production-ready
+--// Skeleton UI Library v3.8 (Premium / Rayfield-style)
 
 --================================================--
 -- Services
@@ -8,26 +7,20 @@
 local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
+local RunService = game:GetService("RunService")
 
 local LocalPlayer = Players.LocalPlayer
-assert(LocalPlayer, "Skeleton UI must be run on the client")
-
--- Camera safety (race-condition proof)
-local Camera = workspace.CurrentCamera
-while not Camera or Camera.ViewportSize.X < 10 do
-    workspace:GetPropertyChangedSignal("CurrentCamera"):Wait()
-    Camera = workspace.CurrentCamera
-end
+local Camera = workspace.CurrentCamera or workspace:WaitForChild("Camera")
 
 --================================================--
 -- Theme
 --================================================--
 
 local Theme = {
-    Background = Color3.fromRGB(18, 18, 22),
-    Secondary  = Color3.fromRGB(28, 28, 34),
-    Accent     = Color3.fromRGB(120, 180, 255),
-    Text       = Color3.fromRGB(235, 235, 235)
+    Background = Color3.fromRGB(18,18,22),
+    Secondary  = Color3.fromRGB(28,28,34),
+    Accent     = Color3.fromRGB(120,180,255),
+    Text       = Color3.fromRGB(235,235,235)
 }
 
 --================================================--
@@ -35,6 +28,288 @@ local Theme = {
 --================================================--
 
 local function Create(class, props)
+    assert(typeof(class) == "string", "Invalid class type")
+    local obj = Instance.new(class)
+
+    local parent = props and props.Parent
+    if props then
+        props.Parent = nil
+        for k,v in pairs(props) do
+            obj[k] = v
+        end
+    end
+
+    obj.Parent = parent
+    return obj
+end
+
+local function Tween(obj, time, props)
+    TweenService:Create(
+        obj,
+        TweenInfo.new(time, Enum.EasingStyle.Sine, Enum.EasingDirection.Out),
+        props
+    ):Play()
+end
+
+--================================================--
+-- ScreenGui + Root Folder (Rayfield-style)
+--================================================--
+
+local function CreateRoot()
+    local parent
+    if typeof(gethui) == "function" then
+        parent = gethui()
+    else
+        parent = LocalPlayer:WaitForChild("PlayerGui")
+    end
+
+    local gui = Instance.new("ScreenGui")
+    gui.Name = "SkeletonUI"
+    gui.IgnoreGuiInset = true
+    gui.ResetOnSpawn = false
+    gui.Parent = parent
+
+    local root = Instance.new("Folder")
+    root.Name = "SkeletonRoot"
+    root.Parent = gui
+
+    return gui, root
+end
+
+--================================================--
+-- Draggable
+--================================================--
+
+local function MakeDraggable(frame, handle)
+    local dragging, dragStart, startPos = false
+
+    handle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = frame.Position
+        end
+    end)
+
+    UIS.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - dragStart
+            frame.Position = UDim2.fromOffset(
+                math.floor(startPos.X.Offset + delta.X),
+                math.floor(startPos.Y.Offset + delta.Y)
+            )
+        end
+    end)
+
+    UIS.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+        end
+    end)
+end
+
+--================================================--
+-- Skeleton API
+--================================================--
+
+local Skeleton = {}
+
+function Skeleton:CreateWindow(opts)
+    opts = opts or {}
+
+    local Window = {}
+    local gui, root = CreateRoot()
+
+    -- Shell
+    local Shell = Create("Frame", {
+        Size = UDim2.fromOffset(560, 440),
+        Position = UDim2.fromScale(0.5, 0.5),
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        BackgroundTransparency = 1,
+        Parent = root
+    })
+
+    -- Main
+    local Main = Create("Frame", {
+        Size = UDim2.fromScale(1,1),
+        BackgroundColor3 = Theme.Background,
+        Parent = Shell
+    })
+    Instance.new("UICorner", Main).CornerRadius = UDim.new(0,14)
+
+    -- Top Bar
+    local Top = Create("Frame", {
+        Size = UDim2.new(1,0,0,48),
+        BackgroundColor3 = Theme.Secondary,
+        ZIndex = 3,
+        Parent = Main
+    })
+    Top.ClipsDescendants = true
+    Instance.new("UICorner", Top).CornerRadius = UDim.new(0,14)
+
+    Create("TextLabel", {
+        Text = opts.Name or "Skeleton UI",
+        Font = Enum.Font.GothamBold,
+        TextSize = 15,
+        TextColor3 = Theme.Text,
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1,-20,1,0),
+        Position = UDim2.new(0,12,0,0),
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextTruncate = Enum.TextTruncate.AtEnd,
+        Parent = Top
+    })
+
+    MakeDraggable(Shell, Top)
+
+    -- Tabs
+    local Tabs = Create("ScrollingFrame", {
+        Size = UDim2.new(0,150,1,-48),
+        Position = UDim2.new(0,0,0,48),
+        BackgroundColor3 = Theme.Secondary,
+        ScrollBarThickness = 3,
+        ScrollingDirection = Enum.ScrollingDirection.Y,
+        Parent = Main
+    })
+
+    Create("UIListLayout", {
+        Padding = UDim.new(0,6),
+        HorizontalAlignment = Enum.HorizontalAlignment.Center,
+        Parent = Tabs
+    })
+
+    Create("UIPadding", {
+        PaddingTop = UDim.new(0,10),
+        Parent = Tabs
+    })
+
+    -- Pages
+    local Pages = Create("Frame", {
+        Size = UDim2.new(1,-150,1,-48),
+        Position = UDim2.new(0,150,0,48),
+        BackgroundTransparency = 1,
+        Parent = Main
+    })
+
+    local firstTab = true
+
+    function Window:CreateTab(name)
+        assert(name, "Tab name missing")
+        local Tab = {}
+
+        local Button = Create("TextButton", {
+            Text = name,
+            Size = UDim2.new(1,-12,0,36),
+            BackgroundColor3 = Theme.Background,
+            TextColor3 = Theme.Text,
+            Font = Enum.Font.Gotham,
+            TextSize = 13,
+            Parent = Tabs
+        })
+        Instance.new("UICorner", Button).CornerRadius = UDim.new(0,10)
+
+        local Page = Create("ScrollingFrame", {
+            Size = UDim2.fromScale(1,1),
+            ScrollBarThickness = 3,
+            ScrollBarImageColor3 = Theme.Accent,
+            Visible = false,
+            Parent = Pages
+        })
+
+        local Layout = Create("UIListLayout", {
+            Padding = UDim.new(0,10),
+            HorizontalAlignment = Enum.HorizontalAlignment.Center,
+            Parent = Page
+        })
+
+        Layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+            Page.CanvasSize = UDim2.fromOffset(0, Layout.AbsoluteContentSize.Y + 10)
+        end)
+
+        local function Select()
+            for _,p in ipairs(Pages:GetChildren()) do
+                if p:IsA("GuiObject") then p.Visible = false end
+            end
+            for _,b in ipairs(Tabs:GetChildren()) do
+                if b:IsA("TextButton") then
+                    Tween(b,0.15,{BackgroundColor3 = Theme.Background})
+                end
+            end
+            Page.Visible = true
+            Tween(Button,0.15,{BackgroundColor3 = Theme.Accent})
+        end
+
+        Button.MouseButton1Click:Connect(Select)
+
+        if firstTab then
+            firstTab = false
+            Select()
+        end
+
+        function Tab:AddSection(title)
+            local Section = {}
+
+            Create("TextLabel", {
+                Text = title,
+                Font = Enum.Font.GothamBold,
+                TextSize = 13,
+                TextColor3 = Theme.Text,
+                BackgroundTransparency = 1,
+                Size = UDim2.new(1,-12,0,20),
+                TextTruncate = Enum.TextTruncate.AtEnd,
+                Parent = Page
+            })
+
+            function Section:AddTextbox(opt)
+                opt = opt or {}
+
+                local box = Create("TextBox", {
+                    PlaceholderText = opt.Placeholder or "Enter text...",
+                    Size = UDim2.new(1,-12,0,40),
+                    BackgroundColor3 = Theme.Secondary,
+                    TextColor3 = Theme.Text,
+                    Font = Enum.Font.Gotham,
+                    TextSize = 13,
+                    ClearTextOnFocus = false,
+                    Parent = Page
+                })
+                Instance.new("UICorner", box).CornerRadius = UDim.new(0,10)
+
+                box.FocusLost:Connect(function(enter)
+                    if typeof(opt.Callback) == "function" then
+                        opt.Callback(box.Text, enter)
+                    end
+                end)
+            end
+
+            return Section
+        end
+
+        return Tab
+    end
+
+    --================================================--
+    -- Keybinds (P show / D hide)
+    --================================================--
+
+    local visible = true
+    UIS.InputBegan:Connect(function(i,gp)
+        if gp then return end
+        if i.KeyCode == Enum.KeyCode.P then
+            Shell.Visible = true
+            visible = true
+        elseif i.KeyCode == Enum.KeyCode.D then
+            Shell.Visible = false
+            visible = false
+        end
+    end)
+
+    return Window
+end
+
+return Skeletonlocal function Create(class, props)
     assert(typeof(class) == "string", "Create(): class must be string")
 
     local ok, obj = pcall(Instance.new, class)
