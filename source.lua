@@ -1,40 +1,356 @@
---// Skeleton UI Library v2.0
---// Clean Rewrite | Closure-Based | Mobile + PC | Executor Safe
+--// Skeleton UI Library v3.5
+--// Final polish: Parent-order fix + UX safety
 
-local Skeleton = {}
+--================================================--
+-- Services
+--================================================--
 
---// Services
 local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
 local TweenService = game:GetService("TweenService")
 local Camera = workspace.CurrentCamera
+
 local LocalPlayer = Players.LocalPlayer
 
---// Theme
+--================================================--
+-- Theme
+--================================================--
+
 local Theme = {
-    Background = Color3.fromRGB(18,18,20),
-    Secondary  = Color3.fromRGB(28,28,32),
-    Accent     = Color3.fromRGB(120,180,255),
-    Text       = Color3.fromRGB(235,235,235)
+    Background = Color3.fromRGB(18, 18, 22),
+    Secondary  = Color3.fromRGB(28, 28, 34),
+    Accent     = Color3.fromRGB(120, 180, 255),
+    Text       = Color3.fromRGB(235, 235, 235)
 }
 
---// Safe ScreenGui creator (ALL executors)
+--================================================--
+-- Utilities (FIXED)
+--================================================--
+
+local function Create(class, props)
+    local obj = Instance.new(class)
+
+    local parent = props and props.Parent
+    if props then
+        props.Parent = nil
+        for k, v in pairs(props) do
+            obj[k] = v
+        end
+    end
+
+    obj.Parent = parent
+    return obj
+end
+
+local function Tween(obj, time, props)
+    TweenService:Create(
+        obj,
+        TweenInfo.new(time, Enum.EasingStyle.Sine, Enum.EasingDirection.Out),
+        props
+    ):Play()
+end
+
+--================================================--
+-- Safe ScreenGui
+--================================================--
+
 local function CreateScreenGui(name)
     local parent
 
-    if gethui then
+    if typeof(gethui) == "function" then
         parent = gethui()
-    elseif syn and syn.protect_gui then
-        local sg = Instance.new("ScreenGui")
-        syn.protect_gui(sg)
-        parent = sg
     else
         parent = LocalPlayer:WaitForChild("PlayerGui")
     end
 
     local gui = Instance.new("ScreenGui")
     gui.Name = name or "SkeletonUI"
+    gui.IgnoreGuiInset = true
     gui.ResetOnSpawn = false
+    gui.Parent = parent
+
+    return gui
+end
+
+--================================================--
+-- Viewport Safety
+--================================================--
+
+while Camera.ViewportSize.X < 10 do
+    Camera:GetPropertyChangedSignal("ViewportSize"):Wait()
+end
+
+--================================================--
+-- Draggable
+--================================================--
+
+local function MakeDraggable(frame, handle)
+    local dragging = false
+    local dragStart, startPos
+
+    handle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = frame.Position
+        end
+    end)
+
+    UIS.InputChanged:Connect(function(input)
+        if dragging and (
+            input.UserInputType == Enum.UserInputType.MouseMovement
+            or input.UserInputType == Enum.UserInputType.Touch
+        ) then
+            local delta = input.Position - dragStart
+            frame.Position = UDim2.fromOffset(
+                startPos.X.Offset + delta.X,
+                startPos.Y.Offset + delta.Y
+            )
+        end
+    end)
+
+    UIS.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+        or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = false
+        end
+    end)
+end
+
+--================================================--
+-- Skeleton
+--================================================--
+
+local Skeleton = {}
+
+function Skeleton:CreateWindow(options)
+    options = options or {}
+    local Window = {}
+
+    local gui = CreateScreenGui("SkeletonUI")
+
+    -- Shell
+    local Shell = Create("Frame", {
+        Size = UDim2.fromOffset(560, 440),
+        Position = UDim2.fromOffset(
+            Camera.ViewportSize.X / 2,
+            Camera.ViewportSize.Y / 2
+        ),
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        BackgroundTransparency = 1,
+        Parent = gui
+    })
+
+    -- Main
+    local Main = Create("Frame", {
+        Size = UDim2.fromScale(1, 1),
+        BackgroundColor3 = Theme.Background,
+        Parent = Shell
+    })
+    Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 14)
+
+    -- Top Bar
+    local Top = Create("Frame", {
+        Size = UDim2.new(1, 0, 0, 48),
+        BackgroundColor3 = Theme.Secondary,
+        ZIndex = 3,
+        Parent = Main
+    })
+    Top.ClipsDescendants = true
+    Instance.new("UICorner", Top).CornerRadius = UDim.new(0, 14)
+
+    Create("TextLabel", {
+        Text = options.Name or "Skeleton UI",
+        Font = Enum.Font.GothamBold,
+        TextSize = 15,
+        TextColor3 = Theme.Text,
+        BackgroundTransparency = 1,
+        Size = UDim2.new(1, -20, 1, 0),
+        Position = UDim2.new(0, 12, 0, 0),
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextTruncate = Enum.TextTruncate.AtEnd,
+        ZIndex = 4,
+        Parent = Top
+    })
+
+    MakeDraggable(Shell, Top)
+
+    -- Tabs
+    local Tabs = Create("ScrollingFrame", {
+        Size = UDim2.new(0, 150, 1, -48),
+        Position = UDim2.new(0, 0, 0, 48),
+        BackgroundColor3 = Theme.Secondary,
+        ScrollBarThickness = 3,
+        ScrollingDirection = Enum.ScrollingDirection.Y,
+        ZIndex = 2,
+        Parent = Main
+    })
+
+    Create("UIListLayout", {
+        Padding = UDim.new(0, 6),
+        HorizontalAlignment = Enum.HorizontalAlignment.Center,
+        Parent = Tabs
+    })
+
+    Create("UIPadding", {
+        PaddingTop = UDim.new(0, 10),
+        Parent = Tabs
+    })
+
+    -- Pages
+    local Pages = Create("Frame", {
+        Size = UDim2.new(1, -150, 1, -48),
+        Position = UDim2.new(0, 150, 0, 48),
+        BackgroundTransparency = 1,
+        ZIndex = 1,
+        Parent = Main
+    })
+
+    local firstTab = true
+
+    function Window:CreateTab(name)
+        local Tab = {}
+
+        local Button = Create("TextButton", {
+            Text = name,
+            Size = UDim2.new(1, -12, 0, 36),
+            BackgroundColor3 = Theme.Background,
+            TextColor3 = Theme.Text,
+            Font = Enum.Font.Gotham,
+            TextSize = 13,
+            Parent = Tabs
+        })
+        Instance.new("UICorner", Button).CornerRadius = UDim.new(0, 10)
+
+        local Page = Create("ScrollingFrame", {
+            Size = UDim2.new(1, 0, 1, 0),
+            ScrollBarThickness = 3,
+            ScrollBarImageColor3 = Theme.Accent,
+            Visible = false,
+            Parent = Pages
+        })
+
+        Create("UIPadding", {
+            PaddingTop = UDim.new(0, 10),
+            Parent = Page
+        })
+
+        local Layout = Create("UIListLayout", {
+            Padding = UDim.new(0, 10),
+            HorizontalAlignment = Enum.HorizontalAlignment.Center,
+            Parent = Page
+        })
+
+        Layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+            Page.CanvasSize = UDim2.fromOffset(0, Layout.AbsoluteContentSize.Y + 10)
+        end)
+
+        local function Select()
+            for _, p in ipairs(Pages:GetChildren()) do
+                if p:IsA("GuiObject") then
+                    p.Visible = false
+                end
+            end
+            for _, b in ipairs(Tabs:GetChildren()) do
+                if b:IsA("TextButton") then
+                    Tween(b, 0.15, { BackgroundColor3 = Theme.Background })
+                end
+            end
+            Page.Visible = true
+            Tween(Button, 0.15, { BackgroundColor3 = Theme.Accent })
+        end
+
+        Button.MouseButton1Click:Connect(Select)
+
+        if firstTab then
+            firstTab = false
+            Select()
+        end
+
+        function Tab:AddSection(title)
+            local Section = {}
+
+            Create("TextLabel", {
+                Text = title,
+                Font = Enum.Font.GothamBold,
+                TextSize = 13,
+                TextColor3 = Theme.Text,
+                BackgroundTransparency = 1,
+                Size = UDim2.new(1, -12, 0, 20),
+                TextTruncate = Enum.TextTruncate.AtEnd,
+                Parent = Page
+            })
+
+            local Container = Create("Frame", {
+                Size = UDim2.new(1, -12, 0, 0),
+                BackgroundTransparency = 1,
+                ZIndex = 2,
+                Parent = Page
+            })
+
+            local CLayout = Create("UIListLayout", {
+                Padding = UDim.new(0, 8),
+                HorizontalAlignment = Enum.HorizontalAlignment.Center,
+                Parent = Container
+            })
+
+            CLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+                Container.Size = UDim2.new(1, -12, 0, CLayout.AbsoluteContentSize.Y)
+            end)
+
+            function Section:AddTextbox(opt)
+                opt = opt or {}
+
+                local box = Create("TextBox", {
+                    PlaceholderText = opt.Placeholder or "Enter text...",
+                    Size = UDim2.new(1, 0, 0, 40),
+                    BackgroundColor3 = Theme.Secondary,
+                    TextColor3 = Theme.Text,
+                    Font = Enum.Font.Gotham,
+                    TextSize = 13,
+                    ZIndex = 3,
+                    ClearTextOnFocus = false,
+                    Parent = Container
+                })
+                Instance.new("UICorner", box).CornerRadius = UDim.new(0, 10)
+
+                box.Focused:Connect(function()
+                    UIS.ModalEnabled = true
+                    local char = LocalPlayer.Character
+                    if char then
+                        local hum = char:FindFirstChildOfClass("Humanoid")
+                        if hum then hum:Move(Vector3.zero) end
+                    end
+                end)
+
+                box.FocusLost:Connect(function(enterPressed)
+                    task.defer(function()
+                        if not UIS:GetFocusedTextBox() then
+                            UIS.ModalEnabled = false
+                        end
+                    end)
+                    if typeof(opt.Callback) == "function" then
+                        task.spawn(opt.Callback, box.Text, enterPressed)
+                    end
+                end)
+            end
+
+            return Section
+        end
+
+        return Tab
+    end
+
+    function Window:Destroy()
+        UIS.ModalEnabled = false
+        gui:Destroy()
+    end
+
+    return Window
+end
+
+return Skeleton    gui.ResetOnSpawn = false
     gui.IgnoreGuiInset = true
     gui.Parent = parent
 
