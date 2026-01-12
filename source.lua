@@ -3,11 +3,12 @@ Skeleton.__index = Skeleton
 
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
 
 local Player = Players.LocalPlayer
 
 function Skeleton.new(title)
-	assert(title, "Title required")
+	assert(title, "Skeleton.new requires a title")
 
 	local self = setmetatable({}, Skeleton)
 
@@ -15,35 +16,40 @@ function Skeleton.new(title)
 	ScreenGui.Name = "SkeletonUI"
 	ScreenGui.ResetOnSpawn = false
 	ScreenGui.Parent = Player:WaitForChild("PlayerGui")
+	self.ScreenGui = ScreenGui
 
-	-- 💀 OPEN BUTTON (TOP MIDDLE)
+	-- Auto scale (PC + Mobile safe)
+	local Scale = Instance.new("UIScale")
+	Scale.Parent = ScreenGui
+	local function updateScale()
+		local v = workspace.CurrentCamera.ViewportSize
+		Scale.Scale = math.clamp(v.X / 1200, 0.75, 1)
+	end
+	updateScale()
+	workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(updateScale)
+
+	-- Open Button (TOP CENTER)
 	local OpenBtn = Instance.new("TextButton")
-	OpenBtn.Size = UDim2.fromOffset(60,60)
-	OpenBtn.Position = UDim2.new(0.5,-30,0,20)
+	OpenBtn.Size = UDim2.fromOffset(56,56)
+	OpenBtn.Position = UDim2.new(0.5,-28,0,20)
 	OpenBtn.Text = "💀"
 	OpenBtn.TextScaled = true
 	OpenBtn.BackgroundColor3 = Color3.fromRGB(0,170,255)
-	OpenBtn.BackgroundTransparency = 0.15
+	OpenBtn.BackgroundTransparency = 0.2
 	OpenBtn.TextColor3 = Color3.new(1,1,1)
 	OpenBtn.Parent = ScreenGui
 	Instance.new("UICorner",OpenBtn).CornerRadius = UDim.new(1,0)
 
-	-- MAIN WINDOW
+	-- Window (CENTER DOWN)
 	local Window = Instance.new("Frame")
 	Window.Size = UDim2.fromOffset(520,360)
-	Window.Position = UDim2.new(0.5,-260,0,100)
+	Window.Position = UDim2.new(0.5,-260,0.5,-140)
 	Window.BackgroundColor3 = Color3.fromRGB(25,25,30)
 	Window.BackgroundTransparency = 0.2
 	Window.Visible = false
 	Window.Parent = ScreenGui
 	Instance.new("UICorner",Window).CornerRadius = UDim.new(0,16)
-
-	local Scale = Instance.new("UIScale", Window)
-	Scale.Scale = math.clamp(workspace.CurrentCamera.ViewportSize.X / 1200, 0.75, 1)
-
-	OpenBtn.MouseButton1Click:Connect(function()
-		Window.Visible = not Window.Visible
-	end)
+	self.Window = Window
 
 	local Header = Instance.new("TextLabel")
 	Header.Size = UDim2.new(1,-20,0,40)
@@ -56,7 +62,7 @@ function Skeleton.new(title)
 	Header.TextColor3 = Color3.fromRGB(240,240,255)
 	Header.Parent = Window
 
-	-- TAB BAR (LEFT)
+	-- Tabs (LEFT, SCROLLING)
 	local TabBar = Instance.new("ScrollingFrame")
 	TabBar.Size = UDim2.fromOffset(140,280)
 	TabBar.Position = UDim2.fromOffset(10,60)
@@ -64,25 +70,28 @@ function Skeleton.new(title)
 	TabBar.CanvasSize = UDim2.new()
 	TabBar.BackgroundTransparency = 1
 	TabBar.Parent = Window
+	self.TabBar = TabBar
 
-	local TabLayout = Instance.new("UIListLayout", TabBar)
+	local TabLayout = Instance.new("UIListLayout",TabBar)
 	TabLayout.Padding = UDim.new(0,6)
+
 	TabLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
 		TabBar.CanvasSize = UDim2.new(0,0,0,TabLayout.AbsoluteContentSize.Y + 6)
 	end)
 
+	-- Content (SCROLLING BUTTONS)
 	local ContentHolder = Instance.new("Frame")
 	ContentHolder.Size = UDim2.new(1,-170,1,-70)
 	ContentHolder.Position = UDim2.fromOffset(160,60)
 	ContentHolder.BackgroundTransparency = 1
 	ContentHolder.Parent = Window
-
-	self.ScreenGui = ScreenGui
-	self.Window = Window
-	self.TabBar = TabBar
 	self.ContentHolder = ContentHolder
-	self.ActiveTab = nil
 
+	OpenBtn.MouseButton1Click:Connect(function()
+		Window.Visible = not Window.Visible
+	end)
+
+	self.ActiveTab = nil
 	return self
 end
 
@@ -108,8 +117,9 @@ function Skeleton:AddTab(name)
 	Page.BackgroundTransparency = 1
 	Page.Parent = self.ContentHolder
 
-	local Layout = Instance.new("UIListLayout", Page)
+	local Layout = Instance.new("UIListLayout",Page)
 	Layout.Padding = UDim.new(0,10)
+
 	Layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
 		Page.CanvasSize = UDim2.new(0,0,0,Layout.AbsoluteContentSize.Y + 10)
 	end)
@@ -143,8 +153,9 @@ function Skeleton:AddTab(name)
 		Holder.Parent = Page
 		Instance.new("UICorner",Holder).CornerRadius = UDim.new(0,12)
 
-		local List = Instance.new("UIListLayout", Holder)
+		local List = Instance.new("UIListLayout",Holder)
 		List.Padding = UDim.new(0,8)
+
 		List:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
 			Holder.Size = UDim2.new(1,0,0,List.AbsoluteContentSize.Y + 10)
 		end)
@@ -189,7 +200,6 @@ function Skeleton:AddTab(name)
 			Toggle.Position = UDim2.new(1,-55,0.5,-12)
 			Toggle.Text = ""
 			Toggle.BackgroundColor3 = Color3.fromRGB(120,120,120)
-			Toggle.BackgroundTransparency = 0.2
 			Toggle.Parent = Row
 			Instance.new("UICorner",Toggle).CornerRadius = UDim.new(1,0)
 
@@ -203,7 +213,7 @@ function Skeleton:AddTab(name)
 			local State = false
 			Toggle.MouseButton1Click:Connect(function()
 				State = not State
-				TweenService:Create(Knob, TweenInfo.new(0.15), {
+				TweenService:Create(Knob,TweenInfo.new(0.15),{
 					Position = State and UDim2.new(1,-22,0,2) or UDim2.fromOffset(2,2)
 				}):Play()
 				Toggle.BackgroundColor3 = State and Color3.fromRGB(0,170,120) or Color3.fromRGB(120,120,120)
