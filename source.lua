@@ -7,18 +7,22 @@ local UserInputService = game:GetService("UserInputService")
 
 local Player = Players.LocalPlayer
 
+-------------------------------------------------
+-- CREATE WINDOW
+-------------------------------------------------
 function Skeleton.new(title)
 	assert(title, "Skeleton.new requires a title")
 
 	local self = setmetatable({}, Skeleton)
 
+	-- ScreenGui
 	local ScreenGui = Instance.new("ScreenGui")
 	ScreenGui.Name = "SkeletonUI"
 	ScreenGui.ResetOnSpawn = false
 	ScreenGui.Parent = Player:WaitForChild("PlayerGui")
 	self.ScreenGui = ScreenGui
 
-	-- Auto scale (PC + Mobile safe)
+	-- Auto scale (mobile safe)
 	local Scale = Instance.new("UIScale")
 	Scale.Parent = ScreenGui
 	local function updateScale()
@@ -28,10 +32,12 @@ function Skeleton.new(title)
 	updateScale()
 	workspace.CurrentCamera:GetPropertyChangedSignal("ViewportSize"):Connect(updateScale)
 
-	-- Open Button (TOP CENTER)
+	-------------------------------------------------
+	-- OPEN BUTTON (TOP CENTER, SLIGHTLY UP)
+	-------------------------------------------------
 	local OpenBtn = Instance.new("TextButton")
 	OpenBtn.Size = UDim2.fromOffset(56,56)
-	OpenBtn.Position = UDim2.new(0.5,-28,0,20)
+	OpenBtn.Position = UDim2.new(0.5,-28,0,8)
 	OpenBtn.Text = "💀"
 	OpenBtn.TextScaled = true
 	OpenBtn.BackgroundColor3 = Color3.fromRGB(0,170,255)
@@ -40,7 +46,9 @@ function Skeleton.new(title)
 	OpenBtn.Parent = ScreenGui
 	Instance.new("UICorner",OpenBtn).CornerRadius = UDim.new(1,0)
 
-	-- Window (CENTER DOWN)
+	-------------------------------------------------
+	-- MAIN WINDOW
+	-------------------------------------------------
 	local Window = Instance.new("Frame")
 	Window.Size = UDim2.fromOffset(520,360)
 	Window.Position = UDim2.new(0.5,-260,0.5,-140)
@@ -51,8 +59,11 @@ function Skeleton.new(title)
 	Instance.new("UICorner",Window).CornerRadius = UDim.new(0,16)
 	self.Window = Window
 
+	-------------------------------------------------
+	-- HEADER
+	-------------------------------------------------
 	local Header = Instance.new("TextLabel")
-	Header.Size = UDim2.new(1,-20,0,40)
+	Header.Size = UDim2.new(1,-60,0,40)
 	Header.Position = UDim2.fromOffset(10,10)
 	Header.BackgroundTransparency = 1
 	Header.Text = title
@@ -62,13 +73,70 @@ function Skeleton.new(title)
 	Header.TextColor3 = Color3.fromRGB(240,240,255)
 	Header.Parent = Window
 
-	-- Tabs (LEFT, SCROLLING)
+	-------------------------------------------------
+	-- CLOSE BUTTON (DESTROY GUI)
+	-------------------------------------------------
+	local Close = Instance.new("TextButton")
+	Close.Size = UDim2.fromOffset(36,36)
+	Close.Position = UDim2.new(1,-46,0,12)
+	Close.Text = "✕"
+	Close.Font = Enum.Font.GothamBold
+	Close.TextSize = 20
+	Close.BackgroundColor3 = Color3.fromRGB(180,60,60)
+	Close.TextColor3 = Color3.new(1,1,1)
+	Close.Parent = Window
+	Instance.new("UICorner",Close).CornerRadius = UDim.new(1,0)
+
+	Close.MouseButton1Click:Connect(function()
+		ScreenGui:Destroy()
+	end)
+
+	-------------------------------------------------
+	-- DRAGGING (PC + MOBILE)
+	-------------------------------------------------
+	do
+		local dragging, dragStart, startPos
+
+		Header.InputBegan:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.MouseButton1
+			or input.UserInputType == Enum.UserInputType.Touch then
+				dragging = true
+				dragStart = input.Position
+				startPos = Window.Position
+			end
+		end)
+
+		UserInputService.InputChanged:Connect(function(input)
+			if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement
+			or input.UserInputType == Enum.UserInputType.Touch) then
+				local delta = input.Position - dragStart
+				Window.Position = UDim2.new(
+					startPos.X.Scale,
+					startPos.X.Offset + delta.X,
+					startPos.Y.Scale,
+					startPos.Y.Offset + delta.Y
+				)
+			end
+		end)
+
+		UserInputService.InputEnded:Connect(function(input)
+			if input.UserInputType == Enum.UserInputType.MouseButton1
+			or input.UserInputType == Enum.UserInputType.Touch then
+				dragging = false
+			end
+		end)
+	end
+
+	-------------------------------------------------
+	-- TAB BAR (SCROLL FIXED)
+	-------------------------------------------------
 	local TabBar = Instance.new("ScrollingFrame")
 	TabBar.Size = UDim2.fromOffset(140,280)
 	TabBar.Position = UDim2.fromOffset(10,60)
 	TabBar.ScrollBarThickness = 4
 	TabBar.CanvasSize = UDim2.new()
 	TabBar.BackgroundTransparency = 1
+	TabBar.AutomaticCanvasSize = Enum.AutomaticSize.None
 	TabBar.Parent = Window
 	self.TabBar = TabBar
 
@@ -79,7 +147,9 @@ function Skeleton.new(title)
 		TabBar.CanvasSize = UDim2.new(0,0,0,TabLayout.AbsoluteContentSize.Y + 6)
 	end)
 
-	-- Content (SCROLLING BUTTONS)
+	-------------------------------------------------
+	-- CONTENT HOLDER
+	-------------------------------------------------
 	local ContentHolder = Instance.new("Frame")
 	ContentHolder.Size = UDim2.new(1,-170,1,-70)
 	ContentHolder.Position = UDim2.fromOffset(160,60)
@@ -87,6 +157,9 @@ function Skeleton.new(title)
 	ContentHolder.Parent = Window
 	self.ContentHolder = ContentHolder
 
+	-------------------------------------------------
+	-- OPEN / CLOSE
+	-------------------------------------------------
 	OpenBtn.MouseButton1Click:Connect(function()
 		Window.Visible = not Window.Visible
 	end)
@@ -95,6 +168,9 @@ function Skeleton.new(title)
 	return self
 end
 
+-------------------------------------------------
+-- TAB
+-------------------------------------------------
 function Skeleton:AddTab(name)
 	local Tab = {}
 
@@ -115,6 +191,7 @@ function Skeleton:AddTab(name)
 	Page.CanvasSize = UDim2.new()
 	Page.Visible = false
 	Page.BackgroundTransparency = 1
+	Page.AutomaticCanvasSize = Enum.AutomaticSize.None
 	Page.Parent = self.ContentHolder
 
 	local Layout = Instance.new("UIListLayout",Page)
@@ -143,6 +220,9 @@ function Skeleton:AddTab(name)
 	Tab.Page = Page
 	Tab.Button = Btn
 
+	-------------------------------------------------
+	-- SECTION
+	-------------------------------------------------
 	function Tab:AddSection()
 		local Section = {}
 
